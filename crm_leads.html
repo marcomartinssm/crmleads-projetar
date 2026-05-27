@@ -104,6 +104,7 @@
     .empty{text-align:center;padding:50px;color:var(--text-muted);font-size:13px;}
     .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;}
   </style>
+<script src="crm_auth.js"></script>
 </head>
 <body>
 <div class="sidebar" id="sb">
@@ -120,6 +121,12 @@
     <a class="nav-i" href="crm_corretores.html"><span class="nav-ic">🏢</span><span class="nav-lbl">Corretores</span></a>
     <a class="nav-i" href="crm_configuracoes.html"><span class="nav-ic">🔧</span><span class="nav-lbl">Configurações</span></a>
   </nav>
+  <div style="padding:12px 8px;border-top:1px solid var(--border);">
+    <button onclick="logout()" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px;border-radius:8px;background:none;border:none;color:var(--text-muted);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='var(--bg3)';this.style.color='var(--danger)'" onmouseout="this.style.background='none';this.style.color='var(--text-muted)'">
+      <span style="font-size:17px;width:20px;text-align:center;">🚪</span>
+      <span class="nav-lbl">Sair</span>
+    </button>
+  </div>
 </div>
 <div class="main" id="main">
   <div class="page-header">
@@ -155,6 +162,7 @@
   const SB='https://jgdbnkwhmesgjvsymgma.supabase.co';
   const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZGJua3dobWVzZ2p2c3ltZ21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjAxODUsImV4cCI6MjA5MDQ5NjE4NX0.2KUPjnJE9vhzYviho16e3afWxyQL0usSjKXf2TLV00Q';
   const H={'apikey':SK,'Authorization':`Bearer ${SK}`,'Content-Type':'application/json','Prefer':'return=representation'};
+  checkAuth();
   let leads=[],funis=[],fases=[],corretores=[],view='lista';
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
   async function init(){
