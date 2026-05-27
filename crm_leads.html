@@ -104,7 +104,6 @@
     .empty{text-align:center;padding:50px;color:var(--text-muted);font-size:13px;}
     .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;}
   </style>
-<script src="crm_auth.js"></script>
 </head>
 <body>
 <div class="sidebar" id="sb">
@@ -159,10 +158,19 @@
 </div>
 <div class="toast" id="toast"></div>
 <script>
-  const H={'apikey':SK,'Authorization':`Bearer ${SK}`,'Content-Type':'application/json','Prefer':'return=representation'};
-  checkAuth();
+
+  const SB='https://jgdbnkwhmesgjvsymgma.supabase.co';
+  const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZGJua3dobWVzZ2p2c3ltZ21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjAxODUsImV4cCI6MjA5MDQ5NjE4NX0.2KUPjnJE9vhzYviho16e3afWxyQL0usSjKXf2TLV00Q';
+
+  function getSession(){try{const s=localStorage.getItem('crm_session');if(!s)return null;const sess=JSON.parse(s);if(sess.expires_at<Date.now()/1000){localStorage.removeItem('crm_session');return null;}return sess;}catch(e){return null;}}
+  function getHeaders(){const sess=getSession();if(!sess){window.location.href='crm_login.html';return null;}return{'apikey':SK,'Authorization':`Bearer ${sess.access_token}`,'Content-Type':'application/json','Prefer':'return=representation'};}
+  function checkAuth(){const sess=getSession();if(!sess)window.location.href='crm_login.html';return sess;}
+  function logout(){localStorage.removeItem('crm_session');window.location.href='crm_login.html';}
+
   let leads=[],funis=[],fases=[],corretores=[],view='lista';
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
+  checkAuth();
+  const H=getHeaders();if(!H)return;
   async function init(){
     await Promise.all([
       fetch(`${SB}/rest/v1/leads?select=*&order=created_at.desc`,{headers:H}).then(r=>r.json()).then(d=>leads=d),
