@@ -116,12 +116,12 @@
   let funis=[],fases=[],leads=[];
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
   checkAuth();
-  const H=getHeaders();if(!H)return;
+  function H(){return getHeaders();}
   async function init(){
     await Promise.all([
-      fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:H}).then(r=>r.json()).then(d=>funis=d),
-      fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:H}).then(r=>r.json()).then(d=>fases=d),
-      fetch(`${SB}/rest/v1/leads?select=*`,{headers:H}).then(r=>r.json()).then(d=>leads=d),
+      fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:H()}).then(r=>r.json()).then(d=>funis=d),
+      fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:H()}).then(r=>r.json()).then(d=>fases=d),
+      fetch(`${SB}/rest/v1/leads?select=*`,{headers:H()}).then(r=>r.json()).then(d=>leads=d),
     ]);
     const sf=document.getElementById('filtroFunil');
     funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});

@@ -145,9 +145,9 @@
   let corretores=[];
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
   checkAuth();
-  const H=getHeaders();if(!H)return;
+  function H(){return getHeaders();}
   async function carregar(){
-    const r=await fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:H});
+    const r=await fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:H()});
     corretores=await r.json();renderizar(corretores);
     document.getElementById('tot').textContent=corretores.length;
     document.getElementById('atv').textContent=corretores.filter(c=>c.ativo).length;
@@ -175,11 +175,11 @@
     const id=document.getElementById('eid').value;
     const d={nome:document.getElementById('inp-nome').value.trim(),email:document.getElementById('inp-email').value.trim(),telefone:document.getElementById('inp-tel').value.trim()};
     if(!d.nome){alert('Nome obrigatório!');return;}
-    if(id){await fetch(`${SB}/rest/v1/corretores?id=eq.${id}`,{method:'PATCH',headers:H,body:JSON.stringify(d)});toast('Corretor atualizado!');}
-    else{await fetch(`${SB}/rest/v1/corretores`,{method:'POST',headers:H,body:JSON.stringify({...d,ativo:true})});toast('Corretor adicionado!');}
+    if(id){await fetch(`${SB}/rest/v1/corretores?id=eq.${id}`,{method:'PATCH',headers:H(),body:JSON.stringify(d)});toast('Corretor atualizado!');}
+    else{await fetch(`${SB}/rest/v1/corretores`,{method:'POST',headers:H(),body:JSON.stringify({...d,ativo:true})});toast('Corretor adicionado!');}
     fechar();carregar();
   }
-  async function toggle(id,at){await fetch(`${SB}/rest/v1/corretores?id=eq.${id}`,{method:'PATCH',headers:H,body:JSON.stringify({ativo:!at})});toast(at?'Desativado!':'Ativado!');carregar();}
+  async function toggle(id,at){await fetch(`${SB}/rest/v1/corretores?id=eq.${id}`,{method:'PATCH',headers:H(),body:JSON.stringify({ativo:!at})});toast(at?'Desativado!':'Ativado!');carregar();}
   function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
   document.getElementById('mo').addEventListener('click',e=>{if(e.target===document.getElementById('mo'))fechar();});
   carregar();
