@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Corretores – CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--bg:#0f0a00;--bg2:#1a1200;--bg3:#221800;--card:#1f1500;--border:#3d2e00;--acc:#f97316;--acc-dark:#ea6c0a;--acc-pale:#3a1f00;--acc-text:#fdba74;--text:#f0e8d8;--text-muted:#8a7a60;--success:#22c55e;--success-bg:#0a2010;--danger:#ef4444;--danger-bg:#200a0a;--radius:10px;--sw:240px;--swc:60px;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    a{text-decoration:none;color:inherit;}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sw);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;transition:width .25s;overflow:hidden;}
+    .sidebar.col{width:var(--swc);}
+    .sb-top{padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);min-height:60px;gap:8px;}
+    .sb-brand{display:flex;align-items:center;gap:10px;overflow:hidden;flex:1;}
+    .sb-icon{width:32px;height:32px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+    .sb-name{font-size:14px;font-weight:700;white-space:nowrap;transition:opacity .2s;}
+    .sb-name span{color:var(--acc);}
+    .btn-tog{background:none;border:1px solid var(--border);color:var(--text-muted);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+    .btn-tog:hover{border-color:var(--acc);color:var(--acc);}
+    .sb-nav{padding:10px 8px;flex:1;}
+    .nav-i{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .nav-i:hover{background:var(--bg3);color:var(--text);}
+    .nav-i.on{background:var(--acc-pale);color:var(--acc-text);border-left:3px solid var(--acc);}
+    .nav-ic{font-size:17px;flex-shrink:0;width:20px;text-align:center;}
+    .nav-lbl{overflow:hidden;transition:opacity .15s,width .15s;}
+    .sidebar.col .nav-lbl,.sidebar.col .sb-name{opacity:0;width:0;}
+    .sidebar.col .nav-i{justify-content:center;}
+    .sidebar.col .nav-i.on{border-left:none;border-radius:8px;}
+    .main{margin-left:var(--sw);min-height:100vh;padding:28px 32px;transition:margin-left .25s;}
+    .main.col{margin-left:var(--swc);}
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+    .page-title{font-size:22px;font-weight:800;}
+    .page-sub{font-size:12px;color:var(--text-muted);margin-top:3px;}
+    .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+    .stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;border-left:3px solid var(--acc);}
+    .stat-val{font-size:30px;font-weight:800;color:var(--acc-text);}
+    .stat-lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-top:3px;}
+    .table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .table-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .table-title{font-size:14px;font-weight:700;}
+    .search-input{padding:7px 12px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text);background:var(--bg3);outline:none;width:200px;transition:border-color .2s;}
+    .search-input:focus{border-color:var(--acc);}
+    table{width:100%;border-collapse:collapse;}
+    th{text-align:left;padding:10px 18px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);background:var(--bg3);border-bottom:1px solid var(--border);}
+    td{padding:12px 18px;font-size:13px;border-bottom:1px solid var(--border);}
+    tr:last-child td{border-bottom:none;}
+    tr:hover td{background:var(--bg3);}
+    .av{width:34px;height:34px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+    .ci{display:flex;align-items:center;gap:10px;}
+    .cn{font-weight:600;font-size:13px;}
+    .ce{font-size:11px;color:var(--text-muted);margin-top:2px;}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:50px;font-size:11px;font-weight:600;}
+    .b-on{background:var(--success-bg);color:var(--success);}
+    .b-off{background:var(--danger-bg);color:var(--danger);}
+    .acts{display:flex;gap:6px;}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:7px;font-family:'Inter',sans-serif;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .2s;}
+    .btn-acc{background:var(--acc);color:#fff;}
+    .btn-acc:hover{background:var(--acc-dark);}
+    .btn-sm-ghost{background:transparent;border:1px solid var(--border);color:var(--text-muted);}
+    .btn-sm-ghost:hover{border-color:var(--acc);color:var(--acc);}
+    .btn-sm-danger{background:var(--danger-bg);border:1px solid #5a1a1a;color:var(--danger);}
+    .btn-sm-danger:hover{background:#2a0a0a;}
+    .btn-sm-success{background:var(--success-bg);border:1px solid #1a4a2a;color:var(--success);}
+    .btn-sm-success:hover{background:#0a1a10;}
+    .mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;}
+    .mo.open{display:flex;}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:420px;}
+    .modal-title{font-size:16px;font-weight:800;margin-bottom:18px;}
+    .fg{margin-bottom:12px;}
+    .fl{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px;}
+    .fi{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:13px;color:var(--text);background:var(--bg3);outline:none;transition:border-color .2s;}
+    .fi:focus{border-color:var(--acc);}
+    .ma{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
+    .empty{text-align:center;padding:50px;color:var(--text-muted);font-size:13px;}
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="sidebar" id="sb">
+  <div class="sb-top">
+    <div class="sb-brand">
+      <div class="sb-icon">🏠</div>
+      <div class="sb-name">CRM <span>Leads</span></div>
+    </div>
+    <button class="btn-tog" onclick="tog()">☰</button>
+  </div>
+  <nav class="sb-nav">
+    <a class="nav-i" href="crm_dashboard.html"><span class="nav-ic">📊</span><span class="nav-lbl">Dashboard</span></a>
+    <a class="nav-i" href="crm_leads.html"><span class="nav-ic">👥</span><span class="nav-lbl">Leads</span></a>
+    <a class="nav-i on" href="crm_corretores.html"><span class="nav-ic">🏢</span><span class="nav-lbl">Corretores</span></a>
+    <a class="nav-i" href="crm_configuracoes.html"><span class="nav-ic">🔧</span><span class="nav-lbl">Configurações</span></a>
+  </nav>
+</div>
+<div class="main" id="main">
+  <div class="page-header">
+    <div><div class="page-title">Corretores</div><div class="page-sub">Gerencie a equipe de corretores</div></div>
+    <button class="btn btn-acc" onclick="abrirModal()">+ Novo Corretor</button>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-val" id="tot">—</div><div class="stat-lbl">Total</div></div>
+    <div class="stat" style="border-color:var(--success)"><div class="stat-val" style="color:var(--success)" id="atv">—</div><div class="stat-lbl">Ativos</div></div>
+    <div class="stat" style="border-color:var(--danger)"><div class="stat-val" style="color:var(--danger)" id="ina">—</div><div class="stat-lbl">Inativos</div></div>
+  </div>
+  <div class="table-card">
+    <div class="table-head">
+      <div class="table-title">Equipe</div>
+      <input class="search-input" type="text" placeholder="🔍 Buscar..." id="busca" oninput="filtrar()"/>
+    </div>
+    <table><thead><tr><th>Corretor</th><th>Telefone</th><th>Status</th><th>Ações</th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="4"><div class="empty">Carregando...</div></td></tr></tbody></table>
+  </div>
+</div>
+<div class="mo" id="mo">
+  <div class="modal">
+    <div class="modal-title" id="mo-title">Novo Corretor</div>
+    <input type="hidden" id="eid"/>
+    <div class="fg"><label class="fl">Nome</label><input class="fi" type="text" id="inp-nome" placeholder="Nome completo"/></div>
+    <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="inp-email" placeholder="email@exemplo.com"/></div>
+    <div class="fg"><label class="fl">Telefone</label><input class="fi" type="text" id="inp-tel" placeholder="(48) 99999-9999"/></div>
+    <div class="ma">
+      <button class="btn btn-sm-ghost" onclick="fechar()">Cancelar</button>
+      <button class="btn btn-acc" onclick="salvar()">Salvar</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+  const SB='https://jgdbnkwhmesgjvsymgma.supabase.co';
+  const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZGJua3dobWVzZ2p2c3ltZ21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjAxODUsImV4cCI6MjA5MDQ5NjE4NX0.2KUPjnJE9vhzYviho16e3afWxyQL0usSjKXf2TLV00Q';
+  const H={'apikey':SK,'Authorization':`Bearer ${SK}`,'Content-Type':'application/json','Prefer':'return=representation'};
+  let corretores=[];
+  function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
+  async function carregar(){
+    const r=await fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:H});
+    corretores=await r.json();renderizar(corretores);
+    document.getElementById('tot').textContent=corretores.length;
+    document.getElementById('atv').textContent=corretores.filter(c=>c.ativo).length;
+    document.getElementById('ina').textContent=corretores.filter(c=>!c.ativo).length;
+  }
+  function ini(n){return n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();}
+  function renderizar(l){
+    const tb=document.getElementById('tbody');
+    if(!l.length){tb.innerHTML=`<tr><td colspan="4"><div class="empty">Nenhum corretor</div></td></tr>`;return;}
+    tb.innerHTML=l.map(c=>`<tr>
+      <td><div class="ci"><div class="av" style="background:${c.ativo?'var(--acc)':'#444'}">${ini(c.nome)}</div>
+      <div><div class="cn">${c.nome}</div><div class="ce">${c.email||'—'}</div></div></div></td>
+      <td>${c.telefone||'—'}</td>
+      <td><span class="badge ${c.ativo?'b-on':'b-off'}">${c.ativo?'● Ativo':'● Inativo'}</span></td>
+      <td><div class="acts">
+        <button class="btn btn-sm-ghost" onclick="editar('${c.id}')">✏️ Editar</button>
+        <button class="btn ${c.ativo?'btn-sm-danger':'btn-sm-success'}" onclick="toggle('${c.id}',${c.ativo})">${c.ativo?'🚫 Desativar':'✅ Ativar'}</button>
+      </div></td></tr>`).join('');
+  }
+  function filtrar(){const q=document.getElementById('busca').value.toLowerCase();renderizar(corretores.filter(c=>c.nome.toLowerCase().includes(q)||(c.email&&c.email.toLowerCase().includes(q))));}
+  function abrirModal(){document.getElementById('eid').value='';document.getElementById('inp-nome').value='';document.getElementById('inp-email').value='';document.getElementById('inp-tel').value='';document.getElementById('mo-title').textContent='Novo Corretor';document.getElementById('mo').classList.add('open');}
+  function editar(id){const c=corretores.find(x=>x.id===id);if(!c)return;document.getElementById('eid').value=c.id;document.getElementById('inp-nome').value=c.nome;document.getElementById('inp-email').value=c.email||'';document.getElementById('inp-tel').value=c.telefone||'';document.getElementById('mo-title').textContent='Editar Corretor';document.getElementById('mo').classList.add('open');}
+  function fechar(){document.getElementById('mo').classList.remove('open');}
+  async function salvar(){
+    const id=document.getElementById('eid').value;
+    const d={nome:document.getElementById('inp-nome').value.trim(),email:document.getElementById('inp-email').value.trim(),telefone:document.getElementById('inp-tel').value.trim()};
+    if(!d.nome){alert('Nome obrigatório!');return;}
+    if(id){await fetch(`${SB}/rest/v1/corretores?id=eq.${id}`,{method:'PATCH',headers:H,body:JSON.stringify(d)});toast('Corretor atualizado!');}
+    else{await fetch(`${SB}/rest/v1/corretores`,{method:'POST',headers:H,body:JSON.stringify({...d,ativo:true})});toast('Corretor adicionado!');}
+    fechar();carregar();
+  }
+  async function toggle(id,at){await fetch(`${SB}/rest/v1/corretores?id=eq.${id}`,{method:'PATCH',headers:H,body:JSON.stringify({ativo:!at})});toast(at?'Desativado!':'Ativado!');carregar();}
+  function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+  document.getElementById('mo').addEventListener('click',e=>{if(e.target===document.getElementById('mo'))fechar();});
+  carregar();
+</script>
+</body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard – CRM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    :root{--bg:#0f0a00;--bg2:#1a1200;--bg3:#221800;--card:#1f1500;--border:#3d2e00;--acc:#f97316;--acc-dark:#ea6c0a;--acc-pale:#3a1f00;--acc-text:#fdba74;--text:#f0e8d8;--text-muted:#8a7a60;--success:#22c55e;--danger:#ef4444;--radius:10px;--sw:240px;--swc:60px;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+    a{text-decoration:none;color:inherit;}
+    .sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sw);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;transition:width .25s;overflow:hidden;}
+    .sidebar.col{width:var(--swc);}
+    .sb-top{padding:16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);min-height:60px;gap:8px;}
+    .sb-brand{display:flex;align-items:center;gap:10px;overflow:hidden;flex:1;}
+    .sb-icon{width:32px;height:32px;background:var(--acc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+    .sb-name{font-size:14px;font-weight:700;white-space:nowrap;transition:opacity .2s;}
+    .sb-name span{color:var(--acc);}
+    .btn-tog{background:none;border:1px solid var(--border);color:var(--text-muted);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;}
+    .btn-tog:hover{border-color:var(--acc);color:var(--acc);}
+    .sb-nav{padding:10px 8px;flex:1;}
+    .nav-i{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;transition:all .2s;white-space:nowrap;}
+    .nav-i:hover{background:var(--bg3);color:var(--text);}
+    .nav-i.on{background:var(--acc-pale);color:var(--acc-text);border-left:3px solid var(--acc);}
+    .nav-ic{font-size:17px;flex-shrink:0;width:20px;text-align:center;}
+    .nav-lbl{overflow:hidden;transition:opacity .15s,width .15s;}
+    .sidebar.col .nav-lbl,.sidebar.col .sb-name{opacity:0;width:0;}
+    .sidebar.col .nav-i{justify-content:center;}
+    .sidebar.col .nav-i.on{border-left:none;border-radius:8px;}
+    .main{margin-left:var(--sw);min-height:100vh;padding:28px 32px;transition:margin-left .25s;}
+    .main.col{margin-left:var(--swc);}
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+    .page-title{font-size:22px;font-weight:800;}
+    .page-sub{font-size:12px;color:var(--text-muted);margin-top:3px;}
+    .filters{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+    .flbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);}
+    .fsel{padding:7px 11px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text);background:var(--bg3);outline:none;cursor:pointer;transition:border-color .2s;}
+    .fsel:focus{border-color:var(--acc);}
+    .btn{padding:7px 16px;border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;}
+    .btn-acc{background:var(--acc);color:#fff;}
+    .btn-acc:hover{background:var(--acc-dark);}
+    .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-muted);}
+    .btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
+    .funis-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+    .fc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .fh{padding:13px 16px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .fn{font-size:13px;font-weight:700;}
+    .ft{background:var(--acc-pale);color:var(--acc-text);padding:2px 9px;border-radius:50px;font-size:12px;font-weight:700;}
+    .fr{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid var(--border);transition:background .15s;}
+    .fr:last-child{border-bottom:none;}
+    .fr:hover{background:var(--bg3);}
+    .frn{font-size:12px;color:var(--text-muted);}
+    .frc{background:var(--acc-pale);color:var(--acc-text);padding:1px 7px;border-radius:50px;font-size:11px;font-weight:700;}
+    .fre{padding:16px;text-align:center;font-size:12px;color:var(--text-muted);font-style:italic;}
+    .cc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+    .ct{font-size:14px;font-weight:700;margin-bottom:16px;}
+    .loading{text-align:center;padding:40px;color:var(--text-muted);font-size:13px;}
+  </style>
+</head>
+<body>
+<div class="sidebar" id="sb">
+  <div class="sb-top">
+    <div class="sb-brand">
+      <div class="sb-icon">🏠</div>
+      <div class="sb-name">CRM <span>Leads</span></div>
+    </div>
+    <button class="btn-tog" onclick="tog()" title="Recolher">☰</button>
+  </div>
+  <nav class="sb-nav">
+    <a class="nav-i on" href="crm_dashboard.html"><span class="nav-ic">📊</span><span class="nav-lbl">Dashboard</span></a>
+    <a class="nav-i" href="crm_leads.html"><span class="nav-ic">👥</span><span class="nav-lbl">Leads</span></a>
+    <a class="nav-i" href="crm_corretores.html"><span class="nav-ic">🏢</span><span class="nav-lbl">Corretores</span></a>
+    <a class="nav-i" href="crm_configuracoes.html"><span class="nav-ic">🔧</span><span class="nav-lbl">Configurações</span></a>
+  </nav>
+</div>
+<div class="main" id="main">
+  <div class="page-header">
+    <div><div class="page-title">Dashboard</div><div class="page-sub">Visão geral dos leads e funis</div></div>
+  </div>
+  <div class="filters">
+    <span class="flbl">Filtrar</span>
+    <select class="fsel" id="filtroFunil"><option value="">Todos os funis</option></select>
+    <select class="fsel" id="filtroMes">
+      <option value="">Todos os meses</option>
+      <option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option>
+      <option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option>
+      <option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option>
+      <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
+    </select>
+    <select class="fsel" id="filtroAno"><option value="">Todos os anos</option></select>
+    <button class="btn btn-acc" onclick="renderizar()">Filtrar</button>
+    <button class="btn btn-ghost" onclick="limpar()">Limpar</button>
+  </div>
+  <div class="funis-grid" id="funisGrid"><div class="loading">Carregando...</div></div>
+  <div class="cc"><div class="ct">Leads por Origem</div><div id="ro"></div></div>
+  <div class="cc" style="margin-top:18px;"><div class="ct">Funil de Conversão — Atendimento</div><div id="fv"></div></div>
+</div>
+<script>
+  const SB='https://jgdbnkwhmesgjvsymgma.supabase.co';
+  const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpnZGJua3dobWVzZ2p2c3ltZ21hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5MjAxODUsImV4cCI6MjA5MDQ5NjE4NX0.2KUPjnJE9vhzYviho16e3afWxyQL0usSjKXf2TLV00Q';
+  const H={'apikey':SK,'Authorization':`Bearer ${SK}`,'Content-Type':'application/json'};
+  let funis=[],fases=[],leads=[];
+  function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
+  async function init(){
+    await Promise.all([
+      fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:H}).then(r=>r.json()).then(d=>funis=d),
+      fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:H}).then(r=>r.json()).then(d=>fases=d),
+      fetch(`${SB}/rest/v1/leads?select=*`,{headers:H}).then(r=>r.json()).then(d=>leads=d),
+    ]);
+    const sf=document.getElementById('filtroFunil');
+    funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});
+    const anos=[...new Set(leads.map(l=>new Date(l.created_at).getFullYear()))].sort((a,b)=>b-a);
+    const sa=document.getElementById('filtroAno');
+    anos.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;sa.appendChild(o);});
+    const ac=new Date().getFullYear();if(anos.includes(ac))sa.value=ac;
+    document.getElementById('filtroMes').value=String(new Date().getMonth()+1).padStart(2,'0');
+    renderizar();
+  }
+  function fl(){
+    const fu=document.getElementById('filtroFunil').value;
+    const me=document.getElementById('filtroMes').value;
+    const an=document.getElementById('filtroAno').value;
+    return leads.filter(l=>{
+      const d=new Date(l.created_at);
+      if(fu&&l.funil_id!==fu)return false;
+      if(an&&d.getFullYear()!==Number(an))return false;
+      if(me&&String(d.getMonth()+1).padStart(2,'0')!==me)return false;
+      return true;
+    });
+  }
+  function renderizar(){const lf=fl();rFunis(lf);rGraf(lf);rFunilV(lf);}
+  function rFunis(lf){
+    const ff=document.getElementById('filtroFunil').value;
+    const fv=ff?funis.filter(f=>f.id===ff):funis;
+    document.getElementById('funisGrid').innerHTML=fv.map(fu=>{
+      const fd=fases.filter(f=>f.funil_id===fu.id);
+      const lfd=lf.filter(l=>l.funil_id===fu.id);
+      const fh=fd.length===0?`<div class="fre">Nenhuma fase</div>`:fd.map(fa=>{
+        const c=lf.filter(l=>l.fase_id===fa.id).length;
+        return `<div class="fr"><span class="frn">${fa.nome}</span><span class="frc">${c}</span></div>`;
+      }).join('');
+      return `<div class="fc"><div class="fh"><span class="fn">${fu.nome}</span><span class="ft">${lfd.length}</span></div>${fh}</div>`;
+    }).join('');
+  }
+  function rGraf(lf){
+    const or={};lf.forEach(l=>{const o=l.origem||'Desconhecido';or[o]=(or[o]||0)+1;});
+    const s=Object.entries(or).sort((a,b)=>b[1]-a[1]);
+    const mx=s.length>0?s[0][1]:1;
+    const c=document.getElementById('ro');
+    if(!s.length){c.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Sem dados</div>';return;}
+    c.innerHTML=s.map(([o,n])=>`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+      <span style="font-size:12px;color:var(--text-muted);width:110px;flex-shrink:0;">${o}</span>
+      <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${Math.round((n/mx)*100)}%;background:var(--acc);border-radius:4px;"></div>
+      </div>
+      <span style="font-size:13px;font-weight:700;color:var(--acc-text);width:22px;text-align:right;">${n}</span>
+    </div>`).join('');
+  }
+  function rFunilV(lf){
+    const fa=funis.find(f=>f.nome==='Atendimento');
+    if(!fa)return;
+    const ff=fases.filter(f=>f.funil_id===fa.id).sort((a,b)=>a.ordem-b.ordem);
+    const la=lf.filter(l=>l.funil_id===fa.id);
+    const c=document.getElementById('fv');
+    if(!la.length){c.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Sem dados</div>';return;}
+    const cores=['#f97316','#fb923c','#fdba74','#fed7aa','#fff7ed'];
+    const ct=ff.map((_,i)=>{const ac=ff.slice(i).map(f=>f.id);return la.filter(l=>ac.includes(l.fase_id)).length;});
+    const mx=ct[0]||1;
+    let h='<div style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:520px;margin:0 auto;">';
+    ff.forEach((fa2,i)=>{
+      const w=Math.max(30,Math.round((ct[i]/mx)*100));
+      h+=`<div style="width:${w}%;background:${cores[i%cores.length]};display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#1a0a00;font-weight:700;margin-bottom:0;">
+        <span style="font-size:12px;">${fa2.nome}</span><span style="font-size:18px;">${ct[i]}</span></div>`;
+      if(i<ff.length-1&&ct[i]>0){
+        const t=Math.round((ct[i+1]/ct[i])*100);
+        h+=`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;color:var(--text-muted);">
+          <span>↓</span><span style="background:var(--acc-pale);color:var(--acc-text);padding:1px 8px;border-radius:50px;font-size:11px;font-weight:700;">${t}%</span>
+          <span>${ct[i+1]} avançaram</span></div>`;
+      }
+    });
+    h+='</div>';c.innerHTML=h;
+  }
+  function limpar(){
+    document.getElementById('filtroFunil').value='';
+    document.getElementById('filtroMes').value='';
+    document.getElementById('filtroAno').value='';
+    renderizar();
+  }
+  init();
+</script>
+</body>
+</html>
