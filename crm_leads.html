@@ -169,14 +169,14 @@
 
   let leads=[],funis=[],fases=[],corretores=[],view='lista';
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
-  checkAuth();
-  function H(){return getHeaders();}
+  await checkAuth();
+  async function H(){return await getHeaders();}
   async function init(){
     await Promise.all([
-      fetch(`${SB}/rest/v1/leads?select=*&order=created_at.desc`,{headers:H()}).then(r=>r.json()).then(d=>leads=d),
-      fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:H()}).then(r=>r.json()).then(d=>funis=d),
-      fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:H()}).then(r=>r.json()).then(d=>fases=d),
-      fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:H()}).then(r=>r.json()).then(d=>corretores=d),
+      fetch(`${SB}/rest/v1/leads?select=*&order=created_at.desc`,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
+      fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
+      fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>fases=d),
+      fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:await H()}).then(r=>r.json()).then(d=>corretores=d),
     ]);
     const sf=document.getElementById('fFunil');funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});
     const sc=document.getElementById('fCor');corretores.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome;sc.appendChild(o);});
@@ -250,14 +250,14 @@
   }
   async function mover(lid,nfid){
     const fa=gFase(nfid);
-    await fetch(`${SB}/rest/v1/leads?id=eq.${lid}`,{method:'PATCH',headers:H(),body:JSON.stringify({fase_id:nfid,funil_id:fa?.funil_id})});
+    await fetch(`${SB}/rest/v1/leads?id=eq.${lid}`,{method:'PATCH',headers:await H(),body:JSON.stringify({fase_id:nfid,funil_id:fa?.funil_id})});
     const i=leads.findIndex(l=>l.id===lid);if(i>=0){leads[i].fase_id=nfid;leads[i].funil_id=fa?.funil_id;}
     toast('Lead movido para '+( fa?.nome||''));render();
   }
   async function abrirD(id){
     const l=leads.find(x=>x.id===id);if(!l)return;
     const fu=gFunil(l.funil_id),fa=gFase(l.fase_id),co=gCor(l.corretor_id);
-    const ri=await fetch(`${SB}/rest/v1/interacoes?lead_id=eq.${id}&order=created_at.desc`,{headers:H()});
+    const ri=await fetch(`${SB}/rest/v1/interacoes?lead_id=eq.${id}&order=created_at.desc`,{headers:await H()});
     const ints=await ri.json();
     const oFu=funis.map(f=>`<option value="${f.id}" ${f.id===l.funil_id?'selected':''}>${f.nome}</option>`).join('');
     const oFa=fases.filter(f=>f.funil_id===l.funil_id).map(f=>`<option value="${f.id}" ${f.id===l.fase_id?'selected':''}>${f.nome}</option>`).join('');
@@ -295,14 +295,14 @@
   }
   async function salvarG(lid){
     const d={funil_id:document.getElementById('eFu').value,fase_id:document.getElementById('eFa').value,corretor_id:document.getElementById('eCo').value||null};
-    await fetch(`${SB}/rest/v1/leads?id=eq.${lid}`,{method:'PATCH',headers:H(),body:JSON.stringify(d)});
+    await fetch(`${SB}/rest/v1/leads?id=eq.${lid}`,{method:'PATCH',headers:await H(),body:JSON.stringify(d)});
     const i=leads.findIndex(l=>l.id===lid);if(i>=0)leads[i]={...leads[i],...d};
     toast('Lead atualizado!');render();
   }
   async function regInt(lid){
     const t=document.getElementById('nTipo').value,d=document.getElementById('nDesc').value.trim();
     if(!t||!d){alert('Preencha tipo e descrição!');return;}
-    await fetch(`${SB}/rest/v1/interacoes`,{method:'POST',headers:H(),body:JSON.stringify({lead_id:lid,tipo:t,descricao:d})});
+    await fetch(`${SB}/rest/v1/interacoes`,{method:'POST',headers:await H(),body:JSON.stringify({lead_id:lid,tipo:t,descricao:d})});
     document.getElementById('nTipo').value='';document.getElementById('nDesc').value='';
     toast('Interação registrada!');abrirD(lid);
   }

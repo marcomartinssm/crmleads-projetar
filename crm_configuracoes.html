@@ -165,10 +165,10 @@
 
   let funis=[],fases=[],funilSel=null,corSel='#f97316';
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
-  checkAuth();
-  function H(){return getHeaders();}
+  await checkAuth();
+  async function H(){return await getHeaders();}
   async function init(){
-    const[rf,rfa]=await Promise.all([fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:H()}),fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:H()})]);
+    const[rf,rfa]=await Promise.all([fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}),fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()})]);
     funis=await rf.json();fases=await rfa.json();renderFunis();
   }
   function renderFunis(){
@@ -216,8 +216,8 @@
         if(!fA||!fB)return;
         const oA=fA.ordem,oB=fB.ordem;fA.ordem=oB;fB.ordem=oA;
         await Promise.all([
-          fetch(`${SB}/rest/v1/fases?id=eq.${fA.id}`,{method:'PATCH',headers:H(),body:JSON.stringify({ordem:oB})}),
-          fetch(`${SB}/rest/v1/fases?id=eq.${fB.id}`,{method:'PATCH',headers:H(),body:JSON.stringify({ordem:oA})})
+          fetch(`${SB}/rest/v1/fases?id=eq.${fA.id}`,{method:'PATCH',headers:await H(),body:JSON.stringify({ordem:oB})}),
+          fetch(`${SB}/rest/v1/fases?id=eq.${fB.id}`,{method:'PATCH',headers:await H(),body:JSON.stringify({ordem:oA})})
         ]);
         renderFases();toast('Ordem atualizada!');
       });
@@ -228,14 +228,14 @@
   async function salvarFunil(){
     const id=document.getElementById('ef-id').value,nome=document.getElementById('ef-nome').value.trim();
     if(!nome){alert('Nome obrigatório!');return;}
-    if(id){await fetch(`${SB}/rest/v1/funis?id=eq.${id}`,{method:'PATCH',headers:H(),body:JSON.stringify({nome})});toast('Funil atualizado!');}
-    else{await fetch(`${SB}/rest/v1/funis`,{method:'POST',headers:H(),body:JSON.stringify({nome,ordem:funis.length+1})});toast('Funil criado!');}
+    if(id){await fetch(`${SB}/rest/v1/funis?id=eq.${id}`,{method:'PATCH',headers:await H(),body:JSON.stringify({nome})});toast('Funil atualizado!');}
+    else{await fetch(`${SB}/rest/v1/funis`,{method:'POST',headers:await H(),body:JSON.stringify({nome,ordem:funis.length+1})});toast('Funil criado!');}
     fMo('mo-funil');await reload();renderFunis();if(funilSel)renderFases();
   }
   function confExcFunil(id,nome){document.getElementById('mc-txt').textContent=`Excluir funil "${nome}"? Todas as fases serão removidas.`;document.getElementById('btn-conf').onclick=()=>excFunil(id);document.getElementById('mo-conf').classList.add('open');}
   async function excFunil(id){
-    await fetch(`${SB}/rest/v1/fases?funil_id=eq.${id}`,{method:'DELETE',headers:H()});
-    await fetch(`${SB}/rest/v1/funis?id=eq.${id}`,{method:'DELETE',headers:H()});
+    await fetch(`${SB}/rest/v1/fases?funil_id=eq.${id}`,{method:'DELETE',headers:await H()});
+    await fetch(`${SB}/rest/v1/funis?id=eq.${id}`,{method:'DELETE',headers:await H()});
     if(funilSel?.id===id){funilSel=null;document.getElementById('fal').innerHTML='<div class="empty">← Selecione um funil</div>';document.getElementById('fa-title').textContent='Selecione um funil';document.getElementById('btn-nf').style.display='none';}
     fMo('mo-conf');await reload();renderFunis();toast('Funil excluído!');
   }
@@ -244,14 +244,14 @@
   async function salvarFase(){
     const id=document.getElementById('efa-id').value,nome=document.getElementById('efa-nome').value.trim();
     if(!nome){alert('Nome obrigatório!');return;}
-    if(id){await fetch(`${SB}/rest/v1/fases?id=eq.${id}`,{method:'PATCH',headers:H(),body:JSON.stringify({nome,cor:corSel})});toast('Fase atualizada!');}
-    else{const q=fases.filter(f=>f.funil_id===funilSel.id).length;await fetch(`${SB}/rest/v1/fases`,{method:'POST',headers:H(),body:JSON.stringify({nome,cor:corSel,funil_id:funilSel.id,ordem:q+1})});toast('Fase criada!');}
+    if(id){await fetch(`${SB}/rest/v1/fases?id=eq.${id}`,{method:'PATCH',headers:await H(),body:JSON.stringify({nome,cor:corSel})});toast('Fase atualizada!');}
+    else{const q=fases.filter(f=>f.funil_id===funilSel.id).length;await fetch(`${SB}/rest/v1/fases`,{method:'POST',headers:await H(),body:JSON.stringify({nome,cor:corSel,funil_id:funilSel.id,ordem:q+1})});toast('Fase criada!');}
     fMo('mo-fase');await reload();renderFases();
   }
   function confExcFase(id,nome){document.getElementById('mc-txt').textContent=`Excluir fase "${nome}"?`;document.getElementById('btn-conf').onclick=()=>excFase(id);document.getElementById('mo-conf').classList.add('open');}
-  async function excFase(id){await fetch(`${SB}/rest/v1/fases?id=eq.${id}`,{method:'DELETE',headers:H()});fMo('mo-conf');await reload();renderFases();toast('Fase excluída!');}
+  async function excFase(id){await fetch(`${SB}/rest/v1/fases?id=eq.${id}`,{method:'DELETE',headers:await H()});fMo('mo-conf');await reload();renderFases();toast('Fase excluída!');}
   async function reload(){
-    const[rf,rfa]=await Promise.all([fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:H()}),fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:H()})]);
+    const[rf,rfa]=await Promise.all([fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}),fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()})]);
     funis=await rf.json();fases=await rfa.json();
   }
   function fMo(id){document.getElementById(id).classList.remove('open');}
