@@ -173,13 +173,6 @@
     const faseDescartadoId='484173c3-5ac5-40bb-9c10-55a3ea875d07';
     const faseHibernadoId='f5625647-df16-4079-8212-74fdd7d34da2';
 
-    // Total Pré Atendimento (sem descartado)
-    let totalPre=0;
-    if(fpa){
-      const fasesPre=fases.filter(f=>f.funil_id===fpa.id&&f.id!==faseDescartadoId);
-      totalPre=lf.filter(l=>fasesPre.some(f=>f.id===l.fase_id)).length;
-    }
-
     // Fases Atendimento
     const ff=fases.filter(f=>f.funil_id===fa.id).sort((a,b)=>a.ordem-b.ordem);
     const la=lf.filter(l=>l.funil_id===fa.id);
@@ -188,7 +181,15 @@
     // Descartados e Nutrição
     const totalDescartados=lf.filter(l=>l.fase_id===faseDescartadoId).length;
     const totalNutricao=lf.filter(l=>l.fase_id===faseHibernadoId).length;
-    const totalGeral=totalPre+totalDescartados+(ct[0]||0)+totalNutricao;
+
+    // Total Pré Atendimento (todos incluindo descartados e nutrição)
+    let totalPre=0;
+    if(fpa){
+      const fasesPre=fases.filter(f=>f.funil_id===fpa.id);
+      totalPre=lf.filter(l=>fasesPre.some(f=>f.id===l.fase_id)).length;
+    }
+    totalPre+=totalDescartados+totalNutricao;
+    const totalGeral=totalPre+(ct[0]||0);
     const pctDesc=totalGeral>0?Math.round((totalDescartados/totalGeral)*100):0;
     const pctNut=totalGeral>0?Math.round((totalNutricao/totalGeral)*100):0;
 
