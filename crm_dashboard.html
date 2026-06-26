@@ -33,7 +33,7 @@
     .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
     .page-title{font-size:22px;font-weight:800;}
     .page-sub{font-size:12px;color:var(--text-muted);margin-top:3px;}
-    .filters{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+    .filters{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:13px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
     .flbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);}
     .fsel{padding:7px 11px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text);background:var(--bg3);outline:none;cursor:pointer;transition:border-color .2s;}
     .fsel:focus{border-color:var(--acc);}
@@ -53,9 +53,16 @@
     .frn{font-size:12px;color:var(--text-muted);}
     .frc{background:var(--acc-pale);color:var(--acc-text);padding:1px 7px;border-radius:50px;font-size:11px;font-weight:700;}
     .fre{padding:16px;text-align:center;font-size:12px;color:var(--text-muted);font-style:italic;}
-    .cc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+    .cc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
     .ct{font-size:14px;font-weight:700;margin-bottom:16px;}
     .loading{text-align:center;padding:40px;color:var(--text-muted);font-size:13px;}
+    .origem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
+    .origem-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border-color .2s;}
+    .origem-card:hover{border-color:var(--acc);}
+    .origem-card.ativa{border-color:var(--acc);background:var(--acc-pale);}
+    .origem-nome{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+    .origem-total{font-size:28px;font-weight:800;color:var(--acc-text);}
+    .origem-pct{font-size:11px;color:var(--text-muted);}
   </style>
 </head>
 <body>
@@ -70,10 +77,13 @@
   <nav class="sb-nav">
     <a class="nav-i on" href="crm_dashboard.html"><span class="nav-ic">📊</span><span class="nav-lbl">Dashboard</span></a>
     <a class="nav-i" href="crm_leads.html"><span class="nav-ic">👥</span><span class="nav-lbl">Leads</span></a>
-    <a class="nav-i" href="crm_corretores.html"><span class="nav-ic">🏢</span><span class="nav-lbl">Corretores</span></a>
-    <a class="nav-i" href="crm_configuracoes.html"><span class="nav-ic">🔧</span><span class="nav-lbl">Configurações</span></a>
+    <a class="nav-i" id="navCorretores" href="crm_corretores.html"><span class="nav-ic">🏢</span><span class="nav-lbl">Corretores</span></a>
+    <a class="nav-i" id="navConfig" href="crm_configuracoes.html"><span class="nav-ic">🔧</span><span class="nav-lbl">Configurações</span></a>
   </nav>
   <div style="padding:12px 8px;border-top:1px solid var(--border);">
+    <div id="infoCorretor" style="padding:10px;font-size:11px;color:var(--text-muted);display:none;">
+      <span style="color:var(--acc-text);font-weight:600;" id="nomeCorretorLogado"></span>
+    </div>
     <button onclick="logout()" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px;border-radius:8px;background:none;border:none;color:var(--text-muted);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='var(--bg3)';this.style.color='var(--danger)'" onmouseout="this.style.background='none';this.style.color='var(--text-muted)'">
       <span style="font-size:17px;width:20px;text-align:center;">🚪</span>
       <span class="nav-lbl">Sair</span>
@@ -82,60 +92,162 @@
 </div>
 <div class="main" id="main">
   <div class="page-header">
-    <div><div class="page-title">Dashboard</div><div class="page-sub">Visão geral dos leads e funis</div></div>
+    <div><div class="page-title">Dashboard</div><div class="page-sub" id="pageSub">Visão geral dos leads e funis</div></div>
   </div>
+
+  <!-- Filtros -->
   <div class="filters">
     <span class="flbl">Filtrar</span>
-    <select class="fsel" id="filtroFunil"><option value="">Todos os funis</option></select>
-    <select class="fsel" id="filtroMes">
+    <select class="fsel" id="filtroFunil" onchange="renderizar()"><option value="">Todos os funis</option></select>
+    <select class="fsel" id="filtroOrigem" onchange="renderizar()"><option value="">Todas as origens</option></select>
+    <select class="fsel" id="filtroMes" onchange="renderizar()">
       <option value="">Todos os meses</option>
       <option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option>
       <option value="04">Abril</option><option value="05">Maio</option><option value="06">Junho</option>
       <option value="07">Julho</option><option value="08">Agosto</option><option value="09">Setembro</option>
       <option value="10">Outubro</option><option value="11">Novembro</option><option value="12">Dezembro</option>
     </select>
-    <select class="fsel" id="filtroAno"><option value="">Todos os anos</option></select>
-    <button class="btn btn-acc" onclick="renderizar()">Filtrar</button>
-    <button class="btn btn-ghost" onclick="limpar()">Limpar</button>
+    <select class="fsel" id="filtroAno" onchange="renderizar()"><option value="">Todos os anos</option></select>
+    <button class="btn btn-ghost" onclick="limpar()">Limpar filtros</button>
   </div>
+
+  <!-- Cards de origem clicáveis -->
+  <div class="cc">
+    <div class="ct">Leads por Origem <span style="font-size:11px;font-weight:400;color:var(--text-muted);">— clique para filtrar</span></div>
+    <div class="origem-grid" id="origemGrid"></div>
+  </div>
+
+  <!-- Funis -->
   <div class="funis-grid" id="funisGrid"><div class="loading">Carregando...</div></div>
-  <div class="cc"><div class="ct">Leads por Origem</div><div id="ro"></div></div>
-  <div class="cc" style="margin-top:18px;"><div class="ct">Funil de Conversão</div><div id="fv"></div></div>
+
+  <!-- Funil de conversão -->
+  <div class="cc"><div class="ct">Funil de Conversão</div><div id="fv"></div></div>
 </div>
 <script src="crm_auth.js"></script>
 <script>
   let funis=[],fases=[],leads=[];
+  let corretorLogadoId=null;
+  let origemAtiva='';
+
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
-  (async()=>{await checkAuth();})();
+
+  (async()=>{
+    await checkAuth();
+    corretorLogadoId = await getCorretorLogado();
+
+    if(corretorLogadoId){
+      document.getElementById('navCorretores').style.display='none';
+      document.getElementById('navConfig').style.display='none';
+      document.getElementById('pageSub').textContent='Seus resultados';
+      document.getElementById('infoCorretor').style.display='block';
+    }
+
+    await init();
+  })();
+
   async function H(){return await getHeaders();}
+
   async function init(){
+    const leadsUrl = corretorLogadoId
+      ? `${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}`
+      : `${SB}/rest/v1/leads?select=*`;
+
     await Promise.all([
       fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
       fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>fases=d),
-      fetch(`${SB}/rest/v1/leads?select=*`,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
+      fetch(leadsUrl,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
     ]);
+
+    if(corretorLogadoId){
+      const resC=await fetch(`${SB}/rest/v1/corretores?id=eq.${corretorLogadoId}&select=nome`,{headers:await H()});
+      const dc=await resC.json();
+      if(dc?.[0]?.nome) document.getElementById('nomeCorretorLogado').textContent='👤 '+dc[0].nome;
+    }
+
+    // Popula filtro funil
     const sf=document.getElementById('filtroFunil');
     funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});
+
+    // Popula filtro origem
+    const origens=[...new Set(leads.map(l=>l.origem).filter(Boolean))].sort();
+    const so=document.getElementById('filtroOrigem');
+    origens.forEach(or=>{const o=document.createElement('option');o.value=or;o.textContent=or;so.appendChild(o);});
+
+    // Popula filtro ano
     const anos=[...new Set(leads.map(l=>new Date(l.created_at).getFullYear()))].sort((a,b)=>b-a);
     const sa=document.getElementById('filtroAno');
     anos.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;sa.appendChild(o);});
     const ac=new Date().getFullYear();if(anos.includes(ac))sa.value=ac;
     document.getElementById('filtroMes').value=String(new Date().getMonth()+1).padStart(2,'0');
+
     renderizar();
   }
+
   function fl(){
     const fu=document.getElementById('filtroFunil').value;
+    const or=document.getElementById('filtroOrigem').value||origemAtiva;
     const me=document.getElementById('filtroMes').value;
     const an=document.getElementById('filtroAno').value;
     return leads.filter(l=>{
+      const d=new Date(l.created_at);
+      if(fu&&l.funil_id!==fu)return false;
+      if(or&&l.origem!==or)return false;
+      if(an&&d.getFullYear()!==Number(an))return false;
+      if(me&&String(d.getMonth()+1).padStart(2,'0')!==me)return false;
+      return true;
+    });
+  }
+
+  function renderizar(){
+    const lf=fl();
+    rOrigens(lf);
+    rFunis(lf);
+    rFunilV(lf);
+  }
+
+  function rOrigens(lf){
+    // Conta por origem considerando TODOS os leads (sem filtro de origem)
+    const leadsBase=leads.filter(l=>{
+      const fu=document.getElementById('filtroFunil').value;
+      const me=document.getElementById('filtroMes').value;
+      const an=document.getElementById('filtroAno').value;
       const d=new Date(l.created_at);
       if(fu&&l.funil_id!==fu)return false;
       if(an&&d.getFullYear()!==Number(an))return false;
       if(me&&String(d.getMonth()+1).padStart(2,'0')!==me)return false;
       return true;
     });
+
+    const or={};
+    leadsBase.forEach(l=>{const o=l.origem||'Desconhecido';or[o]=(or[o]||0)+1;});
+    const total=leadsBase.length||1;
+    const sorted=Object.entries(or).sort((a,b)=>b[1]-a[1]);
+    const origemSelecionada=document.getElementById('filtroOrigem').value||origemAtiva;
+
+    document.getElementById('origemGrid').innerHTML=sorted.map(([nome,qtd])=>{
+      const pct=Math.round((qtd/total)*100);
+      const ativa=origemSelecionada===nome?'ativa':'';
+      return `<div class="origem-card ${ativa}" onclick="filtrarOrigem('${nome}')">
+        <div class="origem-nome">${nome}</div>
+        <div class="origem-total">${qtd}</div>
+        <div class="origem-pct">${pct}% do total</div>
+      </div>`;
+    }).join('');
   }
-  function renderizar(){const lf=fl();rFunis(lf);rGraf(lf);rFunilV(lf);}
+
+  function filtrarOrigem(nome){
+    const sel=document.getElementById('filtroOrigem');
+    if(origemAtiva===nome){
+      // Desseleciona ao clicar de novo
+      origemAtiva='';
+      sel.value='';
+    } else {
+      origemAtiva=nome;
+      sel.value=nome;
+    }
+    renderizar();
+  }
+
   function rFunis(lf){
     const ff=document.getElementById('filtroFunil').value;
     const fv=ff?funis.filter(f=>f.id===ff):funis;
@@ -149,61 +261,31 @@
       return `<div class="fc"><div class="fh"><span class="fn">${fu.nome}</span><span class="ft">${lfd.length}</span></div>${fh}</div>`;
     }).join('');
   }
-  function rGraf(lf){
-    const or={};lf.forEach(l=>{const o=l.origem||'Desconhecido';or[o]=(or[o]||0)+1;});
-    const s=Object.entries(or).sort((a,b)=>b[1]-a[1]);
-    const mx=s.length>0?s[0][1]:1;
-    const c=document.getElementById('ro');
-    if(!s.length){c.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Sem dados</div>';return;}
-    c.innerHTML=s.map(([o,n])=>`<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-      <span style="font-size:12px;color:var(--text-muted);width:110px;flex-shrink:0;">${o}</span>
-      <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;">
-        <div style="height:100%;width:${Math.round((n/mx)*100)}%;background:var(--acc);border-radius:4px;"></div>
-      </div>
-      <span style="font-size:13px;font-weight:700;color:var(--acc-text);width:22px;text-align:right;">${n}</span>
-    </div>`).join('');
-  }
+
   function rFunilV(lf){
     const c=document.getElementById('fv');
     const fpa=funis.find(f=>f.nome==='Pré Atendimento');
     const fa=funis.find(f=>f.nome==='Atendimento');
     if(!fa){c.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Sem dados</div>';return;}
-
-    // IDs fixos
     const faseDescartadoId='484173c3-5ac5-40bb-9c10-55a3ea875d07';
     const faseHibernadoId='f5625647-df16-4079-8212-74fdd7d34da2';
-
-    // Fases Atendimento
     const ff=fases.filter(f=>f.funil_id===fa.id).sort((a,b)=>a.ordem-b.ordem);
     const la=lf.filter(l=>l.funil_id===fa.id);
     const ct=ff.map((_,i)=>{const ac=ff.slice(i).map(f=>f.id);return la.filter(l=>ac.includes(l.fase_id)).length;});
-
-    // Descartados e Nutrição
     const totalDescartados=lf.filter(l=>l.fase_id===faseDescartadoId).length;
     const totalNutricao=lf.filter(l=>l.fase_id===faseHibernadoId).length;
-
-    // Total Pré Atendimento (todos incluindo descartados e nutrição)
     let totalPre=0;
-    if(fpa){
-      const fasesPre=fases.filter(f=>f.funil_id===fpa.id);
-      totalPre=lf.filter(l=>fasesPre.some(f=>f.id===l.fase_id)).length;
-    }
+    if(fpa){const fasesPre=fases.filter(f=>f.funil_id===fpa.id);totalPre=lf.filter(l=>fasesPre.some(f=>f.id===l.fase_id)).length;}
     totalPre+=totalDescartados+totalNutricao;
     const totalGeral=totalPre+(ct[0]||0);
     const pctDesc=totalGeral>0?Math.round((totalDescartados/totalGeral)*100):0;
     const pctNut=totalGeral>0?Math.round((totalNutricao/totalGeral)*100):0;
-
     const mx=Math.max(totalPre,ct[0]||1,1);
     const cores=['#f97316','#fb923c','#fdba74','#fed7aa','#fff7ed'];
-
     let h='<div style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:520px;margin:0 auto;">';
-
-    // Barra Pré Atendimento
     const wPre=Math.max(30,Math.round((totalPre/mx)*100));
-    h+=`<div style="width:${wPre}%;background:#7c3aed;display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#fff;font-weight:700;margin-bottom:0;">
+    h+=`<div style="width:${wPre}%;background:#7c3aed;display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#fff;font-weight:700;">
       <span style="font-size:12px;">Pré Atendimento</span><span style="font-size:18px;">${totalPre}</span></div>`;
-
-    // Taxa de conversão pré → atendimento
     if(totalPre>0&&ct[0]>0){
       const t=Math.round((ct[0]/totalPre)*100);
       h+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px;color:var(--text-muted);width:100%;justify-content:center;">
@@ -211,51 +293,42 @@
         <span style="background:#3b1d6e;color:#c4b5fd;padding:2px 10px;border-radius:50px;font-size:11px;font-weight:700;">↓ ${t}% entraram no Atendimento</span>
         <div style="flex:1;height:1px;background:var(--border);"></div>
       </div>`;
-    } else {
-      h+=`<div style="padding:4px 0;"></div>`;
-    }
-
-    // Barras Atendimento
+    } else {h+=`<div style="padding:4px 0;"></div>`;}
     ff.forEach((fa2,i)=>{
       const w=Math.max(30,Math.round((ct[i]/mx)*100));
-      h+=`<div style="width:${w}%;background:${cores[i%cores.length]};display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#1a0a00;font-weight:700;margin-bottom:0;">
+      h+=`<div style="width:${w}%;background:${cores[i%cores.length]};display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#1a0a00;font-weight:700;">
         <span style="font-size:12px;">${fa2.nome}</span><span style="font-size:18px;">${ct[i]}</span></div>`;
       if(i<ff.length-1&&ct[i]>0){
         const t=Math.round((ct[i+1]/ct[i])*100);
-        h+=`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11px;color:var(--text-muted);">
+        h+=`<div style="display:flex;align-items:center;gap:4px;padding:4px 0;font-size:11px;color:var(--text-muted);">
           <span>↓</span><span style="background:var(--acc-pale);color:var(--acc-text);padding:1px 8px;border-radius:50px;font-size:11px;font-weight:700;">${t}%</span>
           <span>${ct[i+1]} avançaram</span></div>`;
       }
     });
-
-    // Cards Descartados e Nutrição
     h+=`<div style="display:flex;gap:12px;margin-top:20px;width:100%;">
       <div style="flex:1;background:#2d0d0d;border:1px solid #7f1d1d;border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="font-size:11px;color:#fca5a5;font-weight:600;margin-bottom:4px;">🚫 Descartados</div>
-          <div style="font-size:26px;font-weight:800;color:#ef4444;">${totalDescartados}</div>
-        </div>
+        <div><div style="font-size:11px;color:#fca5a5;font-weight:600;margin-bottom:4px;">🚫 Descartados</div>
+        <div style="font-size:26px;font-weight:800;color:#ef4444;">${totalDescartados}</div></div>
         <div style="font-size:22px;font-weight:800;color:#ef4444;opacity:.6;">${pctDesc}%</div>
       </div>
       <div style="flex:1;background:#0d2d14;border:1px solid #14532d;border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div style="font-size:11px;color:#86efac;font-weight:600;margin-bottom:4px;">🌱 Nutrição</div>
-          <div style="font-size:26px;font-weight:800;color:#22c55e;">${totalNutricao}</div>
-        </div>
+        <div><div style="font-size:11px;color:#86efac;font-weight:600;margin-bottom:4px;">🌱 Nutrição</div>
+        <div style="font-size:26px;font-weight:800;color:#22c55e;">${totalNutricao}</div></div>
         <div style="font-size:22px;font-weight:800;color:#22c55e;opacity:.6;">${pctNut}%</div>
       </div>
     </div>`;
-
     h+='</div>';
     c.innerHTML=h;
   }
+
   function limpar(){
+    origemAtiva='';
     document.getElementById('filtroFunil').value='';
+    document.getElementById('filtroOrigem').value='';
     document.getElementById('filtroMes').value='';
     document.getElementById('filtroAno').value='';
     renderizar();
   }
-  init();
 </script>
 </body>
 </html>
