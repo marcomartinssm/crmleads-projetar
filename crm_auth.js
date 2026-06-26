@@ -7,7 +7,6 @@ async function refreshSession() {
     if (!s) return null;
     const sess = JSON.parse(s);
     if (!sess.refresh_token) return null;
-
     const res = await fetch(`${SB}/auth/v1/token?grant_type=refresh_token`, {
       method: 'POST',
       headers: { 'apikey': SK, 'Content-Type': 'application/json' },
@@ -31,11 +30,7 @@ async function getSession() {
     const s = localStorage.getItem('crm_session');
     if (!s) return null;
     const sess = JSON.parse(s);
-
-    // Se ainda válido retorna direto
     if (sess.expires_at > Date.now()/1000 + 60) return sess;
-
-    // Senão tenta renovar
     const newToken = await refreshSession();
     if (newToken) {
       return JSON.parse(localStorage.getItem('crm_session'));
@@ -47,7 +42,7 @@ async function getSession() {
 
 async function getHeaders() {
   const sess = await getSession();
-  if (!sess) { window.location.href='crm_login.html'; return null; }
+  if (!sess) { window.location.href='index.html'; return null; }
   return {
     'apikey': SK,
     'Authorization': `Bearer ${sess.access_token}`,
@@ -58,11 +53,34 @@ async function getHeaders() {
 
 async function checkAuth() {
   const sess = await getSession();
-  if (!sess) window.location.href = 'crm_login.html';
+  if (!sess) window.location.href = 'index.html';
   return sess;
+}
+
+async function getCorretorLogado() {
+  try {
+    const sess = await getSession();
+    if (!sess) return null;
+
+    // Extrai o user_id do token JWT
+    const payload = JSON.parse(atob(sess.access_token.split('.')[1]));
+    const userId = payload.sub;
+
+    const res = await fetch(`${SB}/rest/v1/usuarios_corretores?user_id=eq.${userId}&select=corretor_id`, {
+      headers: {
+        'apikey': SK,
+        'Authorization': `Bearer ${sess.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    const data = await res.json();
+    return data?.[0]?.corretor_id || null;
+  } catch(e) {
+    return null;
+  }
 }
 
 function logout() {
   localStorage.removeItem('crm_session');
-  window.location.href = 'crm_login.html';
+  window.location.href = 'index.html';
 }

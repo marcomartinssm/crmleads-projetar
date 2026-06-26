@@ -103,6 +103,7 @@
     .ni textarea{resize:vertical;min-height:65px;}
     .empty{text-align:center;padding:50px;color:var(--text-muted);font-size:13px;}
     .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;}
+    .badge-corretor{background:var(--acc-pale);color:var(--acc-text);padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700;}
   </style>
 </head>
 <body>
@@ -117,10 +118,13 @@
   <nav class="sb-nav">
     <a class="nav-i" href="crm_dashboard.html"><span class="nav-ic">📊</span><span class="nav-lbl">Dashboard</span></a>
     <a class="nav-i on" href="crm_leads.html"><span class="nav-ic">👥</span><span class="nav-lbl">Leads</span></a>
-    <a class="nav-i" href="crm_corretores.html"><span class="nav-ic">🏢</span><span class="nav-lbl">Corretores</span></a>
-    <a class="nav-i" href="crm_configuracoes.html"><span class="nav-ic">🔧</span><span class="nav-lbl">Configurações</span></a>
+    <a class="nav-i" id="navCorretores" href="crm_corretores.html"><span class="nav-ic">🏢</span><span class="nav-lbl">Corretores</span></a>
+    <a class="nav-i" id="navConfig" href="crm_configuracoes.html"><span class="nav-ic">🔧</span><span class="nav-lbl">Configurações</span></a>
   </nav>
   <div style="padding:12px 8px;border-top:1px solid var(--border);">
+    <div id="infoCorretor" style="padding:10px;font-size:11px;color:var(--text-muted);display:none;">
+      <span style="color:var(--acc-text);font-weight:600;" id="nomeCorretorLogado"></span>
+    </div>
     <button onclick="logout()" style="display:flex;align-items:center;gap:12px;width:100%;padding:10px;border-radius:8px;background:none;border:none;color:var(--text-muted);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;" onmouseover="this.style.background='var(--bg3)';this.style.color='var(--danger)'" onmouseout="this.style.background='none';this.style.color='var(--text-muted)'">
       <span style="font-size:17px;width:20px;text-align:center;">🚪</span>
       <span class="nav-lbl">Sair</span>
@@ -129,7 +133,7 @@
 </div>
 <div class="main" id="main">
   <div class="page-header">
-    <div><div class="page-title">Leads</div><div class="page-sub">Gerencie todos os leads</div></div>
+    <div><div class="page-title">Leads</div><div class="page-sub" id="pageSub">Gerencie todos os leads</div></div>
     <span id="tot" style="font-size:13px;color:var(--text-muted);font-weight:600;"></span>
   </div>
   <div class="toolbar">
@@ -161,22 +165,65 @@
 <script>
 
   let leads=[],funis=[],fases=[],corretores=[],view='lista';
+  let corretorLogadoId = null;
+
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
-  (async()=>{await checkAuth();})();
+
+  (async()=>{
+    await checkAuth();
+    // Descobre se é corretor ou admin
+    corretorLogadoId = await getCorretorLogado();
+
+    // Se for corretor, esconde menus de admin
+    if(corretorLogadoId) {
+      document.getElementById('navCorretores').style.display='none';
+      document.getElementById('navConfig').style.display='none';
+      document.getElementById('pageSub').textContent='Seus leads';
+      // Mostra nome do corretor logado
+      document.getElementById('infoCorretor').style.display='block';
+    }
+
+    await init();
+  })();
+
   async function H(){return await getHeaders();}
+
   async function init(){
+    // Se for corretor filtra só os leads dele, senão traz todos
+    const leadsUrl = corretorLogadoId
+      ? `${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}&order=created_at.desc`
+      : `${SB}/rest/v1/leads?select=*&order=created_at.desc`;
+
     await Promise.all([
-      fetch(`${SB}/rest/v1/leads?select=*&order=created_at.desc`,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
+      fetch(leadsUrl,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
       fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
       fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>fases=d),
       fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:await H()}).then(r=>r.json()).then(d=>corretores=d),
     ]);
-    const sf=document.getElementById('fFunil');funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});
-    const sc=document.getElementById('fCor');corretores.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome;sc.appendChild(o);});
+
+    // Preenche nome do corretor logado na sidebar
+    if(corretorLogadoId) {
+      const cor = corretores.find(c=>c.id===corretorLogadoId);
+      if(cor) document.getElementById('nomeCorretorLogado').textContent='👤 '+cor.nome;
+    }
+
+    const sf=document.getElementById('fFunil');
+    funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});
+
+    // Filtro de corretores só para admin
+    if(!corretorLogadoId) {
+      const sc=document.getElementById('fCor');
+      corretores.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome;sc.appendChild(o);});
+    } else {
+      document.getElementById('fCor').style.display='none';
+    }
+
     const ors=[...new Set(leads.map(l=>l.origem).filter(Boolean))];
-    const so=document.getElementById('fOr');ors.forEach(or=>{const o=document.createElement('option');o.value=or;o.textContent=or;so.appendChild(o);});
+    const so=document.getElementById('fOr');
+    ors.forEach(or=>{const o=document.createElement('option');o.value=or;o.textContent=or;so.appendChild(o);});
     render();
   }
+
   function fl(){
     const b=document.getElementById('busca').value.toLowerCase();
     const fu=document.getElementById('fFunil').value;
@@ -190,6 +237,7 @@
       return true;
     });
   }
+
   function render(){const lf=fl();document.getElementById('tot').textContent=`${lf.length} lead${lf.length!==1?'s':''}`;if(view==='lista')rLista(lf);else rKanban(lf);}
   function ini(n){if(!n)return'?';return n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();}
   function gFunil(id){return funis.find(f=>f.id===id);}
@@ -197,9 +245,10 @@
   function gCor(id){return corretores.find(c=>c.id===id);}
   function bc(fn){if(!fn)return'';if(fn.includes('Pré'))return'bp';if(fn.includes('Atendimento'))return'ba';if(fn.includes('Nutrição'))return'bn';return'bp';}
   function fdt(d){if(!d)return'—';return new Date(d).toLocaleDateString('pt-BR');}
+
   function rLista(lf){
     const tb=document.getElementById('tbody');
-    if(!lf.length){tb.innerHTML=`<tr><td colspan="6"><div class="empty">Nenhum lead</div></td></tr>`;return;}
+    if(!lf.length){tb.innerHTML=`<tr><td colspan="6"><div class="empty">Nenhum lead encontrado</div></td></tr>`;return;}
     tb.innerHTML=lf.map(l=>{
       const fu=gFunil(l.funil_id),fa=gFase(l.fase_id),co=gCor(l.corretor_id);
       return `<tr onclick="abrirD('${l.id}')">
@@ -211,6 +260,7 @@
         <td>${fdt(l.created_at)}</td></tr>`;
     }).join('');
   }
+
   function rKanban(lf){
     const fi=document.getElementById('fFunil').value;
     const c=document.getElementById('kc');
@@ -241,12 +291,14 @@
     });
     c.innerHTML='';c.appendChild(board);
   }
+
   async function mover(lid,nfid){
     const fa=gFase(nfid);
     await fetch(`${SB}/rest/v1/leads?id=eq.${lid}`,{method:'PATCH',headers:await H(),body:JSON.stringify({fase_id:nfid,funil_id:fa?.funil_id})});
     const i=leads.findIndex(l=>l.id===lid);if(i>=0){leads[i].fase_id=nfid;leads[i].funil_id=fa?.funil_id;}
-    toast('Lead movido para '+( fa?.nome||''));render();
+    toast('Lead movido para '+(fa?.nome||''));render();
   }
+
   async function abrirD(id){
     const l=leads.find(x=>x.id===id);if(!l)return;
     const fu=gFunil(l.funil_id),fa=gFase(l.fase_id),co=gCor(l.corretor_id);
@@ -256,6 +308,15 @@
     const oFa=fases.filter(f=>f.funil_id===l.funil_id).map(f=>`<option value="${f.id}" ${f.id===l.fase_id?'selected':''}>${f.nome}</option>`).join('');
     const oCo=corretores.map(c=>`<option value="${c.id}" ${c.id===l.corretor_id?'selected':''}>${c.nome}</option>`).join('');
     const ih=ints.length?ints.map(i=>{const c2=gCor(i.corretor_id);return`<div class="ii"><div class="iih"><span class="iit">${i.tipo||'—'}</span><span class="iid">${fdt(i.created_at)} · ${c2?.nome||'—'}</span></div><div class="iidesc">${i.descricao||''}</div></div>`;}).join(''):'<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">Nenhuma interação</div>';
+
+    // Campo corretor: admin pode alterar, corretor só visualiza
+    const campoCorretor = corretorLogadoId
+      ? `<span class="dv badge-corretor">${co?.nome||'—'}</span>`
+      : `<select class="sel-i" id="eCo"><option value="">Sem corretor</option>${oCo}</select>`;
+
+    // Botão salvar: admin vê sempre, corretor só vê funil/fase
+    const btnSalvar = `<button class="btn-s" onclick="salvarG('${l.id}')">Salvar alterações</button>`;
+
     document.getElementById('mcont').innerHTML=`
       <div class="dh"><div class="dav">${ini(l.nome)}</div><div><div class="dn">${l.nome||'—'}</div><div class="ds">${l.origem||'—'} · ${l.campanha||''}</div></div></div>
       <div class="dsec"><div class="dsec-t">Informações</div>
@@ -268,8 +329,8 @@
       <div class="dsec"><div class="dsec-t">Gestão</div>
         <div class="dr"><span class="dk">Funil</span><select class="sel-i" id="eFu" onchange="atuFases()">${oFu}</select></div>
         <div class="dr"><span class="dk">Fase</span><select class="sel-i" id="eFa">${oFa}</select></div>
-        <div class="dr"><span class="dk">Corretor</span><select class="sel-i" id="eCo"><option value="">Sem corretor</option>${oCo}</select></div>
-        <button class="btn-s" onclick="salvarG('${l.id}')">Salvar alterações</button>
+        <div class="dr"><span class="dk">Corretor</span>${campoCorretor}</div>
+        ${btnSalvar}
       </div>
       <div class="dsec"><div class="dsec-t">Histórico</div>
         <div id="ilist">${ih}</div>
@@ -281,17 +342,22 @@
       </div>`;
     document.getElementById('mo').classList.add('open');
   }
+
   function atuFases(){
     const fi=document.getElementById('eFu').value;
     const fd=fases.filter(f=>f.funil_id===fi);
     document.getElementById('eFa').innerHTML=fd.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
   }
+
   async function salvarG(lid){
-    const d={funil_id:document.getElementById('eFu').value,fase_id:document.getElementById('eFa').value,corretor_id:document.getElementById('eCo').value||null};
+    const d={funil_id:document.getElementById('eFu').value,fase_id:document.getElementById('eFa').value};
+    // Só admin pode alterar corretor
+    if(!corretorLogadoId) d.corretor_id = document.getElementById('eCo').value||null;
     await fetch(`${SB}/rest/v1/leads?id=eq.${lid}`,{method:'PATCH',headers:await H(),body:JSON.stringify(d)});
     const i=leads.findIndex(l=>l.id===lid);if(i>=0)leads[i]={...leads[i],...d};
     toast('Lead atualizado!');render();
   }
+
   async function regInt(lid){
     const t=document.getElementById('nTipo').value,d=document.getElementById('nDesc').value.trim();
     if(!t||!d){alert('Preencha tipo e descrição!');return;}
@@ -299,6 +365,7 @@
     document.getElementById('nTipo').value='';document.getElementById('nDesc').value='';
     toast('Interação registrada!');abrirD(lid);
   }
+
   function fMo(e){if(e.target===document.getElementById('mo'))fechar();}
   function fechar(){document.getElementById('mo').classList.remove('open');}
   function setV(v){
@@ -310,7 +377,6 @@
     render();
   }
   function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
-  init();
 </script>
 </body>
 </html>
