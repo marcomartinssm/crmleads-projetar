@@ -38,8 +38,6 @@
     .fsel{padding:7px 11px;border:1px solid var(--border);border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text);background:var(--bg3);outline:none;cursor:pointer;transition:border-color .2s;}
     .fsel:focus{border-color:var(--acc);}
     .btn{padding:7px 16px;border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;}
-    .btn-acc{background:var(--acc);color:#fff;}
-    .btn-acc:hover{background:var(--acc-dark);}
     .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text-muted);}
     .btn-ghost:hover{border-color:var(--acc);color:var(--acc);}
     .funis-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
@@ -56,12 +54,12 @@
     .cc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:18px;}
     .ct{font-size:14px;font-weight:700;margin-bottom:16px;}
     .loading{text-align:center;padding:40px;color:var(--text-muted);font-size:13px;}
-    .origem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
-    .origem-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:6px;cursor:pointer;transition:border-color .2s;}
+    .origem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;}
+    .origem-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;transition:all .2s;}
     .origem-card:hover{border-color:var(--acc);}
     .origem-card.ativa{border-color:var(--acc);background:var(--acc-pale);}
-    .origem-nome{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
-    .origem-total{font-size:28px;font-weight:800;color:var(--acc-text);}
+    .origem-nome{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+    .origem-total{font-size:26px;font-weight:800;color:var(--acc-text);}
     .origem-pct{font-size:11px;color:var(--text-muted);}
   </style>
 </head>
@@ -95,11 +93,10 @@
     <div><div class="page-title">Dashboard</div><div class="page-sub" id="pageSub">Visão geral dos leads e funis</div></div>
   </div>
 
-  <!-- Filtros -->
   <div class="filters">
     <span class="flbl">Filtrar</span>
     <select class="fsel" id="filtroFunil" onchange="renderizar()"><option value="">Todos os funis</option></select>
-    <select class="fsel" id="filtroOrigem" onchange="renderizar()"><option value="">Todas as origens</option></select>
+    <select class="fsel" id="filtroOrigem" onchange="origemAtiva=this.value;renderizar()"><option value="">Todas as origens</option></select>
     <select class="fsel" id="filtroMes" onchange="renderizar()">
       <option value="">Todos os meses</option>
       <option value="01">Janeiro</option><option value="02">Fevereiro</option><option value="03">Março</option>
@@ -111,16 +108,12 @@
     <button class="btn btn-ghost" onclick="limpar()">Limpar filtros</button>
   </div>
 
-  <!-- Cards de origem clicáveis -->
   <div class="cc">
     <div class="ct">Leads por Origem <span style="font-size:11px;font-weight:400;color:var(--text-muted);">— clique para filtrar</span></div>
     <div class="origem-grid" id="origemGrid"></div>
   </div>
 
-  <!-- Funis -->
   <div class="funis-grid" id="funisGrid"><div class="loading">Carregando...</div></div>
-
-  <!-- Funil de conversão -->
   <div class="cc"><div class="ct">Funil de Conversão</div><div id="fv"></div></div>
 </div>
 <script src="crm_auth.js"></script>
@@ -134,64 +127,67 @@
   (async()=>{
     await checkAuth();
     corretorLogadoId = await getCorretorLogado();
-
     if(corretorLogadoId){
       document.getElementById('navCorretores').style.display='none';
       document.getElementById('navConfig').style.display='none';
       document.getElementById('pageSub').textContent='Seus resultados';
       document.getElementById('infoCorretor').style.display='block';
     }
-
     await init();
   })();
 
   async function H(){return await getHeaders();}
 
   async function init(){
-    const leadsUrl = corretorLogadoId
-      ? `${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}`
-      : `${SB}/rest/v1/leads?select=*`;
-
+    const leadsUrl=corretorLogadoId
+      ?`${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}`
+      :`${SB}/rest/v1/leads?select=*`;
     await Promise.all([
       fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
       fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>fases=d),
       fetch(leadsUrl,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
     ]);
-
     if(corretorLogadoId){
       const resC=await fetch(`${SB}/rest/v1/corretores?id=eq.${corretorLogadoId}&select=nome`,{headers:await H()});
       const dc=await resC.json();
-      if(dc?.[0]?.nome) document.getElementById('nomeCorretorLogado').textContent='👤 '+dc[0].nome;
+      if(dc?.[0]?.nome)document.getElementById('nomeCorretorLogado').textContent='👤 '+dc[0].nome;
     }
-
-    // Popula filtro funil
     const sf=document.getElementById('filtroFunil');
     funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});
-
-    // Popula filtro origem
     const origens=[...new Set(leads.map(l=>l.origem).filter(Boolean))].sort();
     const so=document.getElementById('filtroOrigem');
     origens.forEach(or=>{const o=document.createElement('option');o.value=or;o.textContent=or;so.appendChild(o);});
-
-    // Popula filtro ano
     const anos=[...new Set(leads.map(l=>new Date(l.created_at).getFullYear()))].sort((a,b)=>b-a);
     const sa=document.getElementById('filtroAno');
     anos.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;sa.appendChild(o);});
     const ac=new Date().getFullYear();if(anos.includes(ac))sa.value=ac;
     document.getElementById('filtroMes').value=String(new Date().getMonth()+1).padStart(2,'0');
-
     renderizar();
   }
 
+  // Filtra por período e origem (usado para funis e funil de conversão)
   function fl(){
     const fu=document.getElementById('filtroFunil').value;
-    const or=document.getElementById('filtroOrigem').value||origemAtiva;
     const me=document.getElementById('filtroMes').value;
     const an=document.getElementById('filtroAno').value;
     return leads.filter(l=>{
       const d=new Date(l.created_at);
       if(fu&&l.funil_id!==fu)return false;
-      if(or&&l.origem!==or)return false;
+      if(origemAtiva&&l.origem!==origemAtiva)return false;
+      if(an&&d.getFullYear()!==Number(an))return false;
+      if(me&&String(d.getMonth()+1).padStart(2,'0')!==me)return false;
+      return true;
+    });
+  }
+
+  // Filtra SÓ por período (sem origem) — usado para os cards de origem
+  function flSemOrigem(){
+    const fu=document.getElementById('filtroFunil').value;
+    const me=document.getElementById('filtroMes').value;
+    const an=document.getElementById('filtroAno').value;
+    return leads.filter(l=>{
+      const d=new Date(l.created_at);
+      if(fu&&l.funil_id!==fu)return false;
       if(an&&d.getFullYear()!==Number(an))return false;
       if(me&&String(d.getMonth()+1).padStart(2,'0')!==me)return false;
       return true;
@@ -200,33 +196,21 @@
 
   function renderizar(){
     const lf=fl();
-    rOrigens(lf);
+    rOrigens();
     rFunis(lf);
     rFunilV(lf);
   }
 
-  function rOrigens(lf){
-    // Conta por origem considerando TODOS os leads (sem filtro de origem)
-    const leadsBase=leads.filter(l=>{
-      const fu=document.getElementById('filtroFunil').value;
-      const me=document.getElementById('filtroMes').value;
-      const an=document.getElementById('filtroAno').value;
-      const d=new Date(l.created_at);
-      if(fu&&l.funil_id!==fu)return false;
-      if(an&&d.getFullYear()!==Number(an))return false;
-      if(me&&String(d.getMonth()+1).padStart(2,'0')!==me)return false;
-      return true;
-    });
-
+  function rOrigens(){
+    // Sempre usa leads SEM filtro de origem para mostrar todos os cards com total correto
+    const leadsBase=flSemOrigem();
+    const totalGeral=leadsBase.length||1;
     const or={};
     leadsBase.forEach(l=>{const o=l.origem||'Desconhecido';or[o]=(or[o]||0)+1;});
-    const total=leadsBase.length||1;
     const sorted=Object.entries(or).sort((a,b)=>b[1]-a[1]);
-    const origemSelecionada=document.getElementById('filtroOrigem').value||origemAtiva;
-
     document.getElementById('origemGrid').innerHTML=sorted.map(([nome,qtd])=>{
-      const pct=Math.round((qtd/total)*100);
-      const ativa=origemSelecionada===nome?'ativa':'';
+      const pct=Math.round((qtd/totalGeral)*100);
+      const ativa=origemAtiva===nome?'ativa':'';
       return `<div class="origem-card ${ativa}" onclick="filtrarOrigem('${nome}')">
         <div class="origem-nome">${nome}</div>
         <div class="origem-total">${qtd}</div>
@@ -236,14 +220,12 @@
   }
 
   function filtrarOrigem(nome){
-    const sel=document.getElementById('filtroOrigem');
     if(origemAtiva===nome){
-      // Desseleciona ao clicar de novo
       origemAtiva='';
-      sel.value='';
+      document.getElementById('filtroOrigem').value='';
     } else {
       origemAtiva=nome;
-      sel.value=nome;
+      document.getElementById('filtroOrigem').value=nome;
     }
     renderizar();
   }
@@ -267,56 +249,97 @@
     const fpa=funis.find(f=>f.nome==='Pré Atendimento');
     const fa=funis.find(f=>f.nome==='Atendimento');
     if(!fa){c.innerHTML='<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;">Sem dados</div>';return;}
+
     const faseDescartadoId='484173c3-5ac5-40bb-9c10-55a3ea875d07';
     const faseHibernadoId='f5625647-df16-4079-8212-74fdd7d34da2';
-    const ff=fases.filter(f=>f.funil_id===fa.id).sort((a,b)=>a.ordem-b.ordem);
-    const la=lf.filter(l=>l.funil_id===fa.id);
-    const ct=ff.map((_,i)=>{const ac=ff.slice(i).map(f=>f.id);return la.filter(l=>ac.includes(l.fase_id)).length;});
+
+    // Fases do atendimento
+    const ffAt=fases.filter(f=>f.funil_id===fa.id).sort((a,b)=>a.ordem-b.ordem);
+    const leadsAt=lf.filter(l=>l.funil_id===fa.id);
+    const ct=ffAt.map((_,i)=>{
+      const ids=ffAt.slice(i).map(f=>f.id);
+      return leadsAt.filter(l=>ids.includes(l.fase_id)).length;
+    });
+
+    // Fases do pré-atendimento
+    const fasesPre=fpa?fases.filter(f=>f.funil_id===fpa.id):[];
+
+    // Total geral = TODOS os leads filtrados (é a base 100%)
+    // pois todo lead entra pelo pré-atendimento
+    const totalGeral=lf.length||1;
+
+    // Leads atualmente no pré-atendimento (fases do funil pré)
+    const totalNoPreAtual=lf.filter(l=>fasesPre.some(f=>f.id===l.fase_id)).length;
+
+    // Descartados e hibernados (rastros — passaram pelo funil)
     const totalDescartados=lf.filter(l=>l.fase_id===faseDescartadoId).length;
     const totalNutricao=lf.filter(l=>l.fase_id===faseHibernadoId).length;
-    let totalPre=0;
-    if(fpa){const fasesPre=fases.filter(f=>f.funil_id===fpa.id);totalPre=lf.filter(l=>fasesPre.some(f=>f.id===l.fase_id)).length;}
-    totalPre+=totalDescartados+totalNutricao;
-    const totalGeral=totalPre+(ct[0]||0);
-    const pctDesc=totalGeral>0?Math.round((totalDescartados/totalGeral)*100):0;
-    const pctNut=totalGeral>0?Math.round((totalNutricao/totalGeral)*100):0;
-    const mx=Math.max(totalPre,ct[0]||1,1);
+
+    // Pré-atendimento exibido = quem ainda está no pré + descartados + hibernados
+    const totalPreExibido=totalNoPreAtual+totalDescartados+totalNutricao;
+
+    // Percentuais sempre sobre totalGeral
+    const pctAt=Math.round(((ct[0]||0)/totalGeral)*100);
+    const pctDesc=Math.round((totalDescartados/totalGeral)*100);
+    const pctNut=Math.round((totalNutricao/totalGeral)*100);
+
+    const mx=Math.max(totalGeral,1);
     const cores=['#f97316','#fb923c','#fdba74','#fed7aa','#fff7ed'];
+
     let h='<div style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:520px;margin:0 auto;">';
-    const wPre=Math.max(30,Math.round((totalPre/mx)*100));
-    h+=`<div style="width:${wPre}%;background:#7c3aed;display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#fff;font-weight:700;">
-      <span style="font-size:12px;">Pré Atendimento</span><span style="font-size:18px;">${totalPre}</span></div>`;
-    if(totalPre>0&&ct[0]>0){
-      const t=Math.round((ct[0]/totalPre)*100);
+
+    // Barra total (pré-atendimento = 100%)
+    h+=`<div style="width:100%;background:#7c3aed;display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#fff;font-weight:700;">
+      <span style="font-size:12px;">Total de Leads (Pré Atendimento)</span>
+      <span style="font-size:18px;">${totalGeral}</span>
+    </div>`;
+
+    // Seta com % de conversão para atendimento
+    if(ct[0]>0){
       h+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px;color:var(--text-muted);width:100%;justify-content:center;">
         <div style="flex:1;height:1px;background:var(--border);"></div>
-        <span style="background:#3b1d6e;color:#c4b5fd;padding:2px 10px;border-radius:50px;font-size:11px;font-weight:700;">↓ ${t}% entraram no Atendimento</span>
+        <span style="background:#3b1d6e;color:#c4b5fd;padding:2px 10px;border-radius:50px;font-size:11px;font-weight:700;">↓ ${pctAt}% converteram para Atendimento</span>
         <div style="flex:1;height:1px;background:var(--border);"></div>
       </div>`;
-    } else {h+=`<div style="padding:4px 0;"></div>`;}
-    ff.forEach((fa2,i)=>{
-      const w=Math.max(30,Math.round((ct[i]/mx)*100));
+    } else {
+      h+=`<div style="padding:4px 0;"></div>`;
+    }
+
+    // Barras das fases de atendimento
+    ffAt.forEach((fa2,i)=>{
+      const w=Math.max(10,Math.round((ct[i]/mx)*100));
       h+=`<div style="width:${w}%;background:${cores[i%cores.length]};display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#1a0a00;font-weight:700;">
-        <span style="font-size:12px;">${fa2.nome}</span><span style="font-size:18px;">${ct[i]}</span></div>`;
-      if(i<ff.length-1&&ct[i]>0){
+        <span style="font-size:12px;">${fa2.nome}</span>
+        <span style="font-size:18px;">${ct[i]}</span>
+      </div>`;
+      if(i<ffAt.length-1&&ct[i]>0){
         const t=Math.round((ct[i+1]/ct[i])*100);
         h+=`<div style="display:flex;align-items:center;gap:4px;padding:4px 0;font-size:11px;color:var(--text-muted);">
-          <span>↓</span><span style="background:var(--acc-pale);color:var(--acc-text);padding:1px 8px;border-radius:50px;font-size:11px;font-weight:700;">${t}%</span>
-          <span>${ct[i+1]} avançaram</span></div>`;
+          <span>↓</span>
+          <span style="background:var(--acc-pale);color:var(--acc-text);padding:1px 8px;border-radius:50px;font-size:11px;font-weight:700;">${t}%</span>
+          <span>${ct[i+1]} avançaram</span>
+        </div>`;
       }
     });
+
+    // Cards descartados e hibernados
     h+=`<div style="display:flex;gap:12px;margin-top:20px;width:100%;">
       <div style="flex:1;background:#2d0d0d;border:1px solid #7f1d1d;border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-        <div><div style="font-size:11px;color:#fca5a5;font-weight:600;margin-bottom:4px;">🚫 Descartados</div>
-        <div style="font-size:26px;font-weight:800;color:#ef4444;">${totalDescartados}</div></div>
-        <div style="font-size:22px;font-weight:800;color:#ef4444;opacity:.6;">${pctDesc}%</div>
+        <div>
+          <div style="font-size:11px;color:#fca5a5;font-weight:600;margin-bottom:4px;">🚫 Descartados</div>
+          <div style="font-size:26px;font-weight:800;color:#ef4444;">${totalDescartados}</div>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:#ef4444;opacity:.7;">${pctDesc}%</div>
       </div>
       <div style="flex:1;background:#0d2d14;border:1px solid #14532d;border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
-        <div><div style="font-size:11px;color:#86efac;font-weight:600;margin-bottom:4px;">🌱 Nutrição</div>
-        <div style="font-size:26px;font-weight:800;color:#22c55e;">${totalNutricao}</div></div>
-        <div style="font-size:22px;font-weight:800;color:#22c55e;opacity:.6;">${pctNut}%</div>
+        <div>
+          <div style="font-size:11px;color:#86efac;font-weight:600;margin-bottom:4px;">🌱 Nutrição</div>
+          <div style="font-size:26px;font-weight:800;color:#22c55e;">${totalNutricao}</div>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:#22c55e;opacity:.7;">${pctNut}%</div>
       </div>
     </div>`;
+
     h+='</div>';
     c.innerHTML=h;
   }
