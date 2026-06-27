@@ -61,6 +61,8 @@
     .origem-nome{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
     .origem-total{font-size:26px;font-weight:800;color:var(--acc-text);}
     .origem-pct{font-size:11px;color:var(--text-muted);}
+    .fsel-corretor{padding:7px 11px;border:1px solid var(--acc);border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;color:var(--acc-text);background:var(--acc-pale);outline:none;cursor:pointer;font-weight:600;}
+    .fsel-corretor:focus{border-color:var(--acc-dark);}
   </style>
 </head>
 <body>
@@ -95,6 +97,10 @@
 
   <div class="filters">
     <span class="flbl">Filtrar</span>
+    <!-- Filtro de corretor — só aparece para admin -->
+    <select class="fsel-corretor" id="filtroCorretor" onchange="renderizar()" style="display:none;">
+      <option value="">👥 Todos os corretores</option>
+    </select>
     <select class="fsel" id="filtroFunil" onchange="renderizar()"><option value="">Todos os funis</option></select>
     <select class="fsel" id="filtroOrigem" onchange="origemAtiva=this.value;renderizar()"><option value="">Todas as origens</option></select>
     <select class="fsel" id="filtroMes" onchange="renderizar()">
@@ -114,11 +120,11 @@
   </div>
 
   <div class="funis-grid" id="funisGrid"><div class="loading">Carregando...</div></div>
-  <div class="cc"><div class="ct">Funil de Conversão</div><div id="fv"></div></div>
+  <div class="cc"><div class="ct" id="tituloFunil">Funil de Conversão</div><div id="fv"></div></div>
 </div>
 <script src="crm_auth.js"></script>
 <script>
-  let funis=[],fases=[],leads=[];
+  let funis=[],fases=[],leads=[],corretores=[];
   let corretorLogadoId=null;
   let origemAtiva='';
 
@@ -142,21 +148,37 @@
     const leadsUrl=corretorLogadoId
       ?`${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}`
       :`${SB}/rest/v1/leads?select=*`;
+
     await Promise.all([
       fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
       fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>fases=d),
       fetch(leadsUrl,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
+      fetch(`${SB}/rest/v1/corretores?order=nome&ativo=eq.true`,{headers:await H()}).then(r=>r.json()).then(d=>corretores=d),
     ]);
-    if(corretorLogadoId){
+
+    // Popula filtro de corretor (só para admin)
+    if(!corretorLogadoId){
+      const sc=document.getElementById('filtroCorretor');
+      corretores.forEach(c=>{
+        const o=document.createElement('option');
+        o.value=c.id;
+        o.textContent='👤 '+c.nome;
+        sc.appendChild(o);
+      });
+      sc.style.display='block';
+    } else {
       const resC=await fetch(`${SB}/rest/v1/corretores?id=eq.${corretorLogadoId}&select=nome`,{headers:await H()});
       const dc=await resC.json();
       if(dc?.[0]?.nome)document.getElementById('nomeCorretorLogado').textContent='👤 '+dc[0].nome;
     }
+
     const sf=document.getElementById('filtroFunil');
     funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});
+
     const origens=[...new Set(leads.map(l=>l.origem).filter(Boolean))].sort();
     const so=document.getElementById('filtroOrigem');
     origens.forEach(or=>{const o=document.createElement('option');o.value=or;o.textContent=or;so.appendChild(o);});
+
     const anos=[...new Set(leads.map(l=>new Date(l.created_at).getFullYear()))].sort((a,b)=>b-a);
     const sa=document.getElementById('filtroAno');
     anos.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;sa.appendChild(o);});
@@ -165,36 +187,45 @@
     renderizar();
   }
 
-  // Filtra por período e origem (usado para funis e funil de conversão)
   function fl(){
     const fu=document.getElementById('filtroFunil').value;
     const me=document.getElementById('filtroMes').value;
     const an=document.getElementById('filtroAno').value;
+    const co=document.getElementById('filtroCorretor').value;
     return leads.filter(l=>{
       const d=new Date(l.created_at);
       if(fu&&l.funil_id!==fu)return false;
       if(origemAtiva&&l.origem!==origemAtiva)return false;
       if(an&&d.getFullYear()!==Number(an))return false;
       if(me&&String(d.getMonth()+1).padStart(2,'0')!==me)return false;
+      if(co&&l.corretor_id!==co)return false;
       return true;
     });
   }
 
-  // Filtra SÓ por período (sem origem) — usado para os cards de origem
   function flSemOrigem(){
     const fu=document.getElementById('filtroFunil').value;
     const me=document.getElementById('filtroMes').value;
     const an=document.getElementById('filtroAno').value;
+    const co=document.getElementById('filtroCorretor').value;
     return leads.filter(l=>{
       const d=new Date(l.created_at);
       if(fu&&l.funil_id!==fu)return false;
       if(an&&d.getFullYear()!==Number(an))return false;
       if(me&&String(d.getMonth()+1).padStart(2,'0')!==me)return false;
+      if(co&&l.corretor_id!==co)return false;
       return true;
     });
   }
 
   function renderizar(){
+    // Atualiza título do funil de conversão com nome do corretor selecionado
+    const co=document.getElementById('filtroCorretor').value;
+    const cor=corretores.find(c=>c.id===co);
+    document.getElementById('tituloFunil').textContent=cor
+      ?`Funil de Conversão — ${cor.nome}`
+      :'Funil de Conversão';
+
     const lf=fl();
     rOrigens();
     rFunis(lf);
@@ -202,7 +233,6 @@
   }
 
   function rOrigens(){
-    // Sempre usa leads SEM filtro de origem para mostrar todos os cards com total correto
     const leadsBase=flSemOrigem();
     const totalGeral=leadsBase.length||1;
     const or={};
@@ -253,7 +283,6 @@
     const faseDescartadoId='484173c3-5ac5-40bb-9c10-55a3ea875d07';
     const faseHibernadoId='f5625647-df16-4079-8212-74fdd7d34da2';
 
-    // Fases do atendimento
     const ffAt=fases.filter(f=>f.funil_id===fa.id).sort((a,b)=>a.ordem-b.ordem);
     const leadsAt=lf.filter(l=>l.funil_id===fa.id);
     const ct=ffAt.map((_,i)=>{
@@ -261,40 +290,22 @@
       return leadsAt.filter(l=>ids.includes(l.fase_id)).length;
     });
 
-    // Fases do pré-atendimento
-    const fasesPre=fpa?fases.filter(f=>f.funil_id===fpa.id):[];
-
-    // Total geral = TODOS os leads filtrados (é a base 100%)
-    // pois todo lead entra pelo pré-atendimento
     const totalGeral=lf.length||1;
-
-    // Leads atualmente no pré-atendimento (fases do funil pré)
-    const totalNoPreAtual=lf.filter(l=>fasesPre.some(f=>f.id===l.fase_id)).length;
-
-    // Descartados e hibernados (rastros — passaram pelo funil)
     const totalDescartados=lf.filter(l=>l.fase_id===faseDescartadoId).length;
     const totalNutricao=lf.filter(l=>l.fase_id===faseHibernadoId).length;
-
-    // Pré-atendimento exibido = quem ainda está no pré + descartados + hibernados
-    const totalPreExibido=totalNoPreAtual+totalDescartados+totalNutricao;
-
-    // Percentuais sempre sobre totalGeral
     const pctAt=Math.round(((ct[0]||0)/totalGeral)*100);
     const pctDesc=Math.round((totalDescartados/totalGeral)*100);
     const pctNut=Math.round((totalNutricao/totalGeral)*100);
-
     const mx=Math.max(totalGeral,1);
     const cores=['#f97316','#fb923c','#fdba74','#fed7aa','#fff7ed'];
 
     let h='<div style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:520px;margin:0 auto;">';
 
-    // Barra total (pré-atendimento = 100%)
     h+=`<div style="width:100%;background:#7c3aed;display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#fff;font-weight:700;">
       <span style="font-size:12px;">Total de Leads (Pré Atendimento)</span>
       <span style="font-size:18px;">${totalGeral}</span>
     </div>`;
 
-    // Seta com % de conversão para atendimento
     if(ct[0]>0){
       h+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px;color:var(--text-muted);width:100%;justify-content:center;">
         <div style="flex:1;height:1px;background:var(--border);"></div>
@@ -305,7 +316,6 @@
       h+=`<div style="padding:4px 0;"></div>`;
     }
 
-    // Barras das fases de atendimento
     ffAt.forEach((fa2,i)=>{
       const w=Math.max(10,Math.round((ct[i]/mx)*100));
       h+=`<div style="width:${w}%;background:${cores[i%cores.length]};display:flex;align-items:center;justify-content:space-between;padding:11px 18px;border-radius:6px;color:#1a0a00;font-weight:700;">
@@ -322,7 +332,6 @@
       }
     });
 
-    // Cards descartados e hibernados
     h+=`<div style="display:flex;gap:12px;margin-top:20px;width:100%;">
       <div style="flex:1;background:#2d0d0d;border:1px solid #7f1d1d;border-radius:8px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
         <div>
@@ -346,6 +355,7 @@
 
   function limpar(){
     origemAtiva='';
+    document.getElementById('filtroCorretor').value='';
     document.getElementById('filtroFunil').value='';
     document.getElementById('filtroOrigem').value='';
     document.getElementById('filtroMes').value='';
