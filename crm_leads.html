@@ -43,6 +43,8 @@
     .vtog{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-left:auto;}
     .vbtn{padding:6px 14px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;border:none;background:transparent;color:var(--text-muted);cursor:pointer;transition:all .2s;}
     .vbtn.on{background:var(--acc);color:#fff;}
+    .btn-novo{padding:7px 16px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:background .2s;white-space:nowrap;}
+    .btn-novo:hover{background:var(--acc-dark);}
     .tc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
     table{width:100%;border-collapse:collapse;}
     th{text-align:left;padding:10px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);background:var(--bg3);border-bottom:1px solid var(--border);}
@@ -89,8 +91,11 @@
     .dv{font-weight:600;}
     .sel-i{padding:5px 9px;border:1px solid var(--border);border-radius:6px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text);background:var(--bg3);outline:none;}
     .sel-i:focus{border-color:var(--acc);}
+    .inp-i{padding:5px 9px;border:1px solid var(--border);border-radius:6px;font-family:'Inter',sans-serif;font-size:12px;color:var(--text);background:var(--bg3);outline:none;width:100%;}
+    .inp-i:focus{border-color:var(--acc);}
     .btn-s{padding:7px 16px;background:var(--acc);color:#fff;border:none;border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;margin-top:7px;transition:background .2s;}
     .btn-s:hover{background:var(--acc-dark);}
+    .btn-s:disabled{opacity:.5;cursor:not-allowed;}
     .ii{padding:9px 0;border-bottom:1px solid var(--border);}
     .ii:last-child{border-bottom:none;}
     .iih{display:flex;justify-content:space-between;margin-bottom:3px;}
@@ -103,7 +108,11 @@
     .ni textarea{resize:vertical;min-height:65px;}
     .empty{text-align:center;padding:50px;color:var(--text-muted);font-size:13px;}
     .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;}
+    .toast.erro{background:var(--danger);}
     .badge-corretor{background:var(--acc-pale);color:var(--acc-text);padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700;}
+    .aviso-dup{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#fca5a5;padding:10px 13px;border-radius:8px;font-size:12px;margin-bottom:12px;display:none;}
+    .fg{margin-bottom:12px;}
+    .fg label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px;}
   </style>
 </head>
 <body>
@@ -134,7 +143,10 @@
 <div class="main" id="main">
   <div class="page-header">
     <div><div class="page-title">Leads</div><div class="page-sub" id="pageSub">Gerencie todos os leads</div></div>
-    <span id="tot" style="font-size:13px;color:var(--text-muted);font-weight:600;"></span>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span id="tot" style="font-size:13px;color:var(--text-muted);font-weight:600;"></span>
+      <button class="btn-novo" onclick="abrirNovoLead()">+ Novo Lead</button>
+    </div>
   </div>
   <div class="toolbar">
     <div class="sw"><span class="sw-ic">🔍</span><input type="text" id="busca" placeholder="Buscar nome, telefone, email..." oninput="render()"/></div>
@@ -154,76 +166,267 @@
   </div>
   <div id="vKanban" class="kb"><div id="kc"></div></div>
 </div>
+
+<!-- Modal detalhes/edição lead -->
 <div class="mo" id="mo" onclick="fMo(event)">
   <div class="mside" id="mside">
     <button class="mc" onclick="fechar()">✕</button>
     <div id="mcont">Carregando...</div>
   </div>
 </div>
+
+<!-- Modal novo lead -->
+<div class="mo" id="moNovo" onclick="fMoNovo(event)">
+  <div class="mside" id="msideNovo">
+    <button class="mc" onclick="fecharNovo()">✕</button>
+    <div id="mcontNovo">
+      <div class="dh">
+        <div class="dav">➕</div>
+        <div><div class="dn">Novo Lead</div><div class="ds">Cadastro manual</div></div>
+      </div>
+
+      <div class="aviso-dup" id="avisoDup">⚠️ <span id="avisoDupTxt"></span></div>
+
+      <div class="fg">
+        <label>Nome *</label>
+        <input class="inp-i" type="text" id="nNome" placeholder="Nome completo"/>
+      </div>
+      <div class="fg">
+        <label>Telefone *</label>
+        <input class="inp-i" type="text" id="nTelefone" placeholder="Ex: 48999999999" oninput="verificarDuplicado()"/>
+      </div>
+      <div class="fg">
+        <label>Email</label>
+        <input class="inp-i" type="email" id="nEmail" placeholder="email@exemplo.com"/>
+      </div>
+      <div class="fg">
+        <label>Origem *</label>
+        <select class="inp-i" id="nOrigem">
+          <option value="">Selecione a origem...</option>
+          <option>Indicação</option>
+          <option>Instagram Imobiliária</option>
+          <option>Instagram Corretor</option>
+          <option>Anúncio Corretor</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Campanha / Empreendimento</label>
+        <input class="inp-i" type="text" id="nCampanha" placeholder="Ex: Residencial Aurora"/>
+      </div>
+      <div class="fg">
+        <label>Funil *</label>
+        <select class="inp-i" id="nFunil" onchange="atuFasesNovo()">
+          <option value="">Selecione o funil...</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Fase *</label>
+        <select class="inp-i" id="nFase">
+          <option value="">Selecione a fase...</option>
+        </select>
+      </div>
+      <div class="fg" id="fgCorretorNovo">
+        <label>Corretor *</label>
+        <select class="inp-i" id="nCorretor">
+          <option value="">Selecione o corretor...</option>
+        </select>
+      </div>
+
+      <button class="btn-s" id="btnSalvarNovo" onclick="salvarNovoLead()" style="width:100%;margin-top:8px;">
+        ✅ Cadastrar Lead
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <script src="crm_auth.js"></script>
 <script>
-
   let leads=[],funis=[],fases=[],corretores=[],view='lista';
-  let corretorLogadoId = null;
+  let corretorLogadoId=null;
 
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
 
   (async()=>{
     await checkAuth();
-    // Descobre se é corretor ou admin
-    corretorLogadoId = await getCorretorLogado();
-
-    // Se for corretor, esconde menus de admin
-    if(corretorLogadoId) {
+    corretorLogadoId=await getCorretorLogado();
+    if(corretorLogadoId){
       document.getElementById('navCorretores').style.display='none';
       document.getElementById('navConfig').style.display='none';
       document.getElementById('pageSub').textContent='Seus leads';
-      // Mostra nome do corretor logado
       document.getElementById('infoCorretor').style.display='block';
     }
-
     await init();
   })();
 
   async function H(){return await getHeaders();}
 
   async function init(){
-    // Se for corretor filtra só os leads dele, senão traz todos
-    const leadsUrl = corretorLogadoId
-      ? `${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}&order=created_at.desc`
-      : `${SB}/rest/v1/leads?select=*&order=created_at.desc`;
-
+    const leadsUrl=corretorLogadoId
+      ?`${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}&order=created_at.desc`
+      :`${SB}/rest/v1/leads?select=*&order=created_at.desc`;
     await Promise.all([
       fetch(leadsUrl,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
       fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
       fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>fases=d),
-      fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:await H()}).then(r=>r.json()).then(d=>corretores=d),
+      fetch(`${SB}/rest/v1/corretores?order=nome&ativo=eq.true`,{headers:await H()}).then(r=>r.json()).then(d=>corretores=d),
     ]);
-
-    // Preenche nome do corretor logado na sidebar
-    if(corretorLogadoId) {
-      const cor = corretores.find(c=>c.id===corretorLogadoId);
-      if(cor) document.getElementById('nomeCorretorLogado').textContent='👤 '+cor.nome;
+    if(corretorLogadoId){
+      const cor=corretores.find(c=>c.id===corretorLogadoId);
+      if(cor)document.getElementById('nomeCorretorLogado').textContent='👤 '+cor.nome;
     }
-
     const sf=document.getElementById('fFunil');
     funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;sf.appendChild(o);});
-
-    // Filtro de corretores só para admin
-    if(!corretorLogadoId) {
+    if(!corretorLogadoId){
       const sc=document.getElementById('fCor');
       corretores.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome;sc.appendChild(o);});
     } else {
       document.getElementById('fCor').style.display='none';
     }
-
     const ors=[...new Set(leads.map(l=>l.origem).filter(Boolean))];
     const so=document.getElementById('fOr');
     ors.forEach(or=>{const o=document.createElement('option');o.value=or;o.textContent=or;so.appendChild(o);});
+
+    // Popula funis no modal novo lead
+    const snf=document.getElementById('nFunil');
+    funis.forEach(f=>{const o=document.createElement('option');o.value=f.id;o.textContent=f.nome;snf.appendChild(o);});
+
+    // Popula corretores no modal novo lead
+    if(corretorLogadoId){
+      // Corretor só pode criar para si mesmo — campo fixo
+      const cor=corretores.find(c=>c.id===corretorLogadoId);
+      const sc=document.getElementById('nCorretor');
+      const o=document.createElement('option');
+      o.value=cor.id;o.textContent=cor.nome;o.selected=true;
+      sc.appendChild(o);
+      sc.disabled=true;
+    } else {
+      const sc=document.getElementById('nCorretor');
+      corretores.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.nome;sc.appendChild(o);});
+    }
+
     render();
   }
 
+  // ── NOVO LEAD ────────────────────────────────────────
+  function abrirNovoLead(){
+    // Limpa campos
+    ['nNome','nTelefone','nEmail','nCampanha'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('nOrigem').value='';
+    document.getElementById('nFunil').value='';
+    document.getElementById('nFase').innerHTML='<option value="">Selecione a fase...</option>';
+    if(!corretorLogadoId) document.getElementById('nCorretor').value='';
+    document.getElementById('avisoDup').style.display='none';
+    document.getElementById('moNovo').classList.add('open');
+  }
+
+  function fecharNovo(){document.getElementById('moNovo').classList.remove('open');}
+  function fMoNovo(e){if(e.target===document.getElementById('moNovo'))fecharNovo();}
+
+  function atuFasesNovo(){
+    const fi=document.getElementById('nFunil').value;
+    const fd=fases.filter(f=>f.funil_id===fi);
+    document.getElementById('nFase').innerHTML='<option value="">Selecione a fase...</option>'+
+      fd.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
+  }
+
+  function ultimos8(tel){
+    const nums=tel.replace(/\D/g,'');
+    return nums.slice(-8);
+  }
+
+  let _dupTimer=null;
+  function verificarDuplicado(){
+    const tel=document.getElementById('nTelefone').value;
+    const aviso=document.getElementById('avisoDup');
+    if(tel.replace(/\D/g,'').length<8){aviso.style.display='none';return;}
+    // Debounce 500ms para não disparar a cada tecla
+    clearTimeout(_dupTimer);
+    _dupTimer=setTimeout(async()=>{
+      const suf=ultimos8(tel);
+      // Busca no Supabase todos os leads com telefone terminando nos mesmos 8 dígitos
+      // Usa ILIKE com wildcard para comparar sufixo
+      try{
+        const h=await H();
+        if(!h)return;
+        const res=await fetch(`${SB}/rest/v1/leads?select=id,nome,telefone,fase_id,corretor_id&telefone=ilike.*${suf}`,{headers:h});
+        const data=await res.json();
+        if(data&&data.length>0){
+          // Busca nome do corretor e fase (pode não estar em memória para corretores)
+          const dup=data[0];
+          // Tenta pegar da memória primeiro
+          let nomeCor=gCor(dup.corretor_id)?.nome;
+          let nomeFa=gFase(dup.fase_id)?.nome;
+          // Se não achou (lead de outro corretor), busca no Supabase
+          if(!nomeCor){
+            const rc=await fetch(`${SB}/rest/v1/corretores?id=eq.${dup.corretor_id}&select=nome`,{headers:h});
+            const dc=await rc.json();
+            nomeCor=dc?.[0]?.nome||'outro corretor';
+          }
+          if(!nomeFa){
+            const rf=await fetch(`${SB}/rest/v1/fases?id=eq.${dup.fase_id}&select=nome`,{headers:h});
+            const df=await rf.json();
+            nomeFa=df?.[0]?.nome||'sem fase';
+          }
+          document.getElementById('avisoDupTxt').textContent=
+            `Lead já existe: ${dup.nome} — ${nomeFa} — Corretor: ${nomeCor}`;
+          aviso.style.display='block';
+        } else {
+          aviso.style.display='none';
+        }
+      }catch(e){aviso.style.display='none';}
+    },500);
+  }
+
+  async function salvarNovoLead(){
+    const nome=document.getElementById('nNome').value.trim();
+    const telefone=document.getElementById('nTelefone').value.trim();
+    const email=document.getElementById('nEmail').value.trim();
+    const origem=document.getElementById('nOrigem').value;
+    const campanha=document.getElementById('nCampanha').value.trim();
+    const funil_id=document.getElementById('nFunil').value;
+    const fase_id=document.getElementById('nFase').value;
+    const corretor_id=document.getElementById('nCorretor').value;
+
+    if(!nome||!telefone||!origem||!funil_id||!fase_id||!corretor_id){
+      toast('Preencha todos os campos obrigatórios!','erro');return;
+    }
+
+    // Verifica duplicado pelos 8 últimos dígitos
+    const suf=ultimos8(telefone);
+    const dup=leads.find(l=>(l.telefone||'').replace(/\D/g,'').slice(-8)===suf);
+    if(dup){
+      const cor=gCor(dup.corretor_id);
+      const fa=gFase(dup.fase_id);
+      toast(`Lead duplicado: ${dup.nome} já existe (${fa?.nome||''} · ${cor?.nome||''})`, 'erro');
+      return;
+    }
+
+    const btn=document.getElementById('btnSalvarNovo');
+    btn.disabled=true;btn.textContent='Salvando...';
+
+    try{
+      const res=await fetch(`${SB}/rest/v1/leads`,{
+        method:'POST',
+        headers:await H(),
+        body:JSON.stringify({nome,telefone,email:email||null,origem,campanha:campanha||null,funil_id,fase_id,corretor_id})
+      });
+      const data=await res.json();
+      if(data&&data[0]){
+        leads.unshift(data[0]);
+        fecharNovo();
+        render();
+        toast('Lead cadastrado com sucesso!');
+      } else {
+        toast('Erro ao cadastrar lead.','erro');
+      }
+    } catch(e){
+      toast('Erro de conexão.','erro');
+    }
+    btn.disabled=false;btn.textContent='✅ Cadastrar Lead';
+  }
+
+  // ── LISTA / KANBAN ───────────────────────────────────
   function fl(){
     const b=document.getElementById('busca').value.toLowerCase();
     const fu=document.getElementById('fFunil').value;
@@ -308,15 +511,9 @@
     const oFa=fases.filter(f=>f.funil_id===l.funil_id).map(f=>`<option value="${f.id}" ${f.id===l.fase_id?'selected':''}>${f.nome}</option>`).join('');
     const oCo=corretores.map(c=>`<option value="${c.id}" ${c.id===l.corretor_id?'selected':''}>${c.nome}</option>`).join('');
     const ih=ints.length?ints.map(i=>{const c2=gCor(i.corretor_id);return`<div class="ii"><div class="iih"><span class="iit">${i.tipo||'—'}</span><span class="iid">${fdt(i.created_at)} · ${c2?.nome||'—'}</span></div><div class="iidesc">${i.descricao||''}</div></div>`;}).join(''):'<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px;">Nenhuma interação</div>';
-
-    // Campo corretor: admin pode alterar, corretor só visualiza
-    const campoCorretor = corretorLogadoId
-      ? `<span class="dv badge-corretor">${co?.nome||'—'}</span>`
-      : `<select class="sel-i" id="eCo"><option value="">Sem corretor</option>${oCo}</select>`;
-
-    // Botão salvar: admin vê sempre, corretor só vê funil/fase
-    const btnSalvar = `<button class="btn-s" onclick="salvarG('${l.id}')">Salvar alterações</button>`;
-
+    const campoCorretor=corretorLogadoId
+      ?`<span class="dv badge-corretor">${co?.nome||'—'}</span>`
+      :`<select class="sel-i" id="eCo"><option value="">Sem corretor</option>${oCo}</select>`;
     document.getElementById('mcont').innerHTML=`
       <div class="dh"><div class="dav">${ini(l.nome)}</div><div><div class="dn">${l.nome||'—'}</div><div class="ds">${l.origem||'—'} · ${l.campanha||''}</div></div></div>
       <div class="dsec"><div class="dsec-t">Informações</div>
@@ -330,7 +527,7 @@
         <div class="dr"><span class="dk">Funil</span><select class="sel-i" id="eFu" onchange="atuFases()">${oFu}</select></div>
         <div class="dr"><span class="dk">Fase</span><select class="sel-i" id="eFa">${oFa}</select></div>
         <div class="dr"><span class="dk">Corretor</span>${campoCorretor}</div>
-        ${btnSalvar}
+        <button class="btn-s" onclick="salvarG('${l.id}')">Salvar alterações</button>
       </div>
       <div class="dsec"><div class="dsec-t">Histórico</div>
         <div id="ilist">${ih}</div>
@@ -351,8 +548,7 @@
 
   async function salvarG(lid){
     const d={funil_id:document.getElementById('eFu').value,fase_id:document.getElementById('eFa').value};
-    // Só admin pode alterar corretor
-    if(!corretorLogadoId) d.corretor_id = document.getElementById('eCo').value||null;
+    if(!corretorLogadoId)d.corretor_id=document.getElementById('eCo').value||null;
     await fetch(`${SB}/rest/v1/leads?id=eq.${lid}`,{method:'PATCH',headers:await H(),body:JSON.stringify(d)});
     const i=leads.findIndex(l=>l.id===lid);if(i>=0)leads[i]={...leads[i],...d};
     toast('Lead atualizado!');render();
@@ -376,7 +572,13 @@
     document.getElementById('btnK').classList.toggle('on',v==='kanban');
     render();
   }
-  function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+  function toast(m,tipo){
+    const t=document.getElementById('toast');
+    t.textContent=m;
+    t.className='toast'+(tipo==='erro'?' erro':'');
+    t.style.display='block';
+    setTimeout(()=>t.style.display='none',4000);
+  }
 </script>
 </body>
 </html>
