@@ -149,8 +149,25 @@
       ?`${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}`
       :`${SB}/rest/v1/leads?select=*`;
 
+    // Busca funis com permissão para o corretor logado ou todos para admin
+    let funisPermitidos=[];
+    if(corretorLogadoId){
+      const [todosF, permissoes, todosRestritos] = await Promise.all([
+        fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()),
+        fetch(`${SB}/rest/v1/funis_permissoes?corretor_id=eq.${corretorLogadoId}&select=funil_id`,{headers:await H()}).then(r=>r.json()),
+        fetch(`${SB}/rest/v1/funis_permissoes?select=funil_id`,{headers:await H()}).then(r=>r.json()),
+      ]);
+      const idsPermitidos=permissoes.map(p=>p.funil_id);
+      const idsRestritos=[...new Set(todosRestritos.map(x=>x.funil_id))];
+      funisPermitidos=todosF.filter(f=>
+        idsPermitidos.includes(f.id) || !idsRestritos.includes(f.id)
+      );
+    }
+
     await Promise.all([
-      fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
+      corretorLogadoId
+        ? Promise.resolve(funisPermitidos).then(d=>funis=d)
+        : fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
       fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>fases=d),
       fetch(leadsUrl,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
       fetch(`${SB}/rest/v1/corretores?order=nome&ativo=eq.true`,{headers:await H()}).then(r=>r.json()).then(d=>corretores=d),

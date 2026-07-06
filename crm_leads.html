@@ -207,7 +207,6 @@
           <option>Instagram Imobiliária</option>
           <option>Instagram Corretor</option>
           <option>Anúncio Corretor</option>
-          <option>Prospecção Ativa</option>
         </select>
       </div>
       <div class="fg">
@@ -266,9 +265,26 @@
     const leadsUrl=corretorLogadoId
       ?`${SB}/rest/v1/leads?select=*&corretor_id=eq.${corretorLogadoId}&order=created_at.desc`
       :`${SB}/rest/v1/leads?select=*&order=created_at.desc`;
+    // Busca funis com permissão para o corretor logado ou todos para admin
+    let funisPermitidos=[];
+    if(corretorLogadoId){
+      // Funis sem nenhuma restrição (não estão em funis_permissoes)
+      const [todosF, permissoes] = await Promise.all([
+        fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()),
+        fetch(`${SB}/rest/v1/funis_permissoes?corretor_id=eq.${corretorLogadoId}&select=funil_id`,{headers:await H()}).then(r=>r.json()),
+        fetch(`${SB}/rest/v1/funis_permissoes?select=funil_id`,{headers:await H()}).then(r=>r.json()).then(d=>window._funisRestritos=d.map(x=>x.funil_id)),
+      ]);
+      const idsPermitidos=permissoes.map(p=>p.funil_id);
+      funisPermitidos=todosF.filter(f=>
+        idsPermitidos.includes(f.id) || !window._funisRestritos.includes(f.id)
+      );
+    }
+
     await Promise.all([
       fetch(leadsUrl,{headers:await H()}).then(r=>r.json()).then(d=>leads=d),
-      fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
+      corretorLogadoId
+        ? Promise.resolve(funisPermitidos).then(d=>funis=d)
+        : fetch(`${SB}/rest/v1/funis?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>funis=d),
       fetch(`${SB}/rest/v1/fases?order=ordem`,{headers:await H()}).then(r=>r.json()).then(d=>fases=d),
       fetch(`${SB}/rest/v1/corretores?order=nome&ativo=eq.true`,{headers:await H()}).then(r=>r.json()).then(d=>corretores=d),
     ]);
