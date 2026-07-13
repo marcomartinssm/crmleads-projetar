@@ -63,6 +63,11 @@
     .origem-pct{font-size:11px;color:var(--text-muted);}
     .fsel-corretor{padding:7px 11px;border:1px solid var(--acc);border-radius:7px;font-family:'Inter',sans-serif;font-size:12px;color:var(--acc-text);background:var(--acc-pale);outline:none;cursor:pointer;font-weight:600;}
     .fsel-corretor:focus{border-color:var(--acc-dark);}
+    .vol-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;}
+    .vol-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:4px;}
+    .vol-label{font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+    .vol-value{font-size:26px;font-weight:800;color:var(--success);}
+    .vol-sub{font-size:11px;color:var(--text-muted);}
   </style>
 </head>
 <body>
@@ -117,6 +122,11 @@
   <div class="cc">
     <div class="ct">Leads por Origem <span style="font-size:11px;font-weight:400;color:var(--text-muted);">— clique para filtrar</span></div>
     <div class="origem-grid" id="origemGrid"></div>
+  </div>
+
+  <div class="cc" id="volSection">
+    <div class="ct">💰 Volume de Negociações</div>
+    <div class="vol-grid" id="volGrid"></div>
   </div>
 
   <div class="funis-grid" id="funisGrid"><div class="loading">Carregando...</div></div>
@@ -235,6 +245,45 @@
     });
   }
 
+  function fVal(v){
+    if(!v||isNaN(v))return'—';
+    const n=Number(v);
+    if(n>=1000000)return'R$ '+(n/1000000).toFixed(n%1000000===0?0:1).replace('.',',')+'M';
+    if(n>=1000)return'R$ '+(n/1000).toFixed(n%1000===0?0:1).replace('.',',')+'k';
+    return'R$ '+n.toLocaleString('pt-BR');
+  }
+
+  function rVol(lf){
+    const totalVol=lf.reduce((s,l)=>s+(Number(l.valor_negociacao)||0),0);
+    const leadsComValor=lf.filter(l=>l.valor_negociacao&&Number(l.valor_negociacao)>0);
+    const ticketMedio=leadsComValor.length>0?totalVol/leadsComValor.length:0;
+    let volPorCorretor='';
+    if(!corretorLogadoId){
+      const porCor={};
+      lf.forEach(l=>{
+        if(l.valor_negociacao&&Number(l.valor_negociacao)>0)
+          porCor[l.corretor_id]=(porCor[l.corretor_id]||0)+Number(l.valor_negociacao);
+      });
+      volPorCorretor=Object.entries(porCor).sort((a,b)=>b[1]-a[1]).map(([cid,val])=>{
+        const cor=corretores.find(c=>c.id===cid);
+        const qtd=lf.filter(l=>l.corretor_id===cid&&l.valor_negociacao>0).length;
+        return `<div class="vol-card"><div class="vol-label">👤 ${cor?.nome||'—'}</div><div class="vol-value" style="font-size:20px;">${fVal(val)}</div><div class="vol-sub">${qtd} negociações</div></div>`;
+      }).join('');
+    }
+    document.getElementById('volGrid').innerHTML=`
+      <div class="vol-card" style="border-color:var(--success);background:#0a1f0f;">
+        <div class="vol-label">📊 Volume Total</div>
+        <div class="vol-value">${totalVol>0?fVal(totalVol):'R$ 0'}</div>
+        <div class="vol-sub">${leadsComValor.length} leads com valor</div>
+      </div>
+      <div class="vol-card">
+        <div class="vol-label">🎯 Ticket Médio</div>
+        <div class="vol-value" style="font-size:20px;">${ticketMedio>0?fVal(ticketMedio):'—'}</div>
+        <div class="vol-sub">Média por negociação</div>
+      </div>
+      ${volPorCorretor}`;
+  }
+
   function renderizar(){
     // Atualiza título do funil de conversão com nome do corretor selecionado
     const co=document.getElementById('filtroCorretor').value;
@@ -245,6 +294,7 @@
 
     const lf=fl();
     rOrigens();
+    rVol(lf);
     rFunis(lf);
     rFunilV(lf);
   }

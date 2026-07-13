@@ -110,6 +110,7 @@
     .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;}
     .toast.erro{background:var(--danger);}
     .badge-corretor{background:var(--acc-pale);color:var(--acc-text);padding:3px 10px;border-radius:50px;font-size:11px;font-weight:700;}
+    .kv{display:inline-block;padding:2px 7px;border-radius:50px;font-size:10px;font-weight:700;background:#0a2010;color:#86efac;margin-top:4px;}
     .aviso-dup{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);color:#fca5a5;padding:10px 13px;border-radius:8px;font-size:12px;margin-bottom:12px;display:none;}
     .fg{margin-bottom:12px;}
     .fg label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);margin-bottom:5px;}
@@ -160,7 +161,7 @@
   </div>
   <div id="vLista">
     <div class="tc"><table>
-      <thead><tr><th>Nome</th><th>Contato</th><th>Origem</th><th>Funil / Fase</th><th>Corretor</th><th>Entrada</th></tr></thead>
+      <thead><tr><th>Nome</th><th>Contato</th><th>Origem</th><th>Funil / Fase</th><th>Corretor</th><th>Valor</th><th>Entrada</th></tr></thead>
       <tbody id="tbody"><tr><td colspan="6"><div class="empty">Carregando...</div></td></tr></tbody>
     </table></div>
   </div>
@@ -207,7 +208,6 @@
           <option>Instagram Imobiliária</option>
           <option>Instagram Corretor</option>
           <option>Anúncio Corretor</option>
-          <option>Prospecção Ativa</option>
         </select>
       </div>
       <div class="fg">
@@ -466,6 +466,13 @@
   function gCor(id){return corretores.find(c=>c.id===id);}
   function bc(fn){if(!fn)return'';if(fn.includes('Pré'))return'bp';if(fn.includes('Atendimento'))return'ba';if(fn.includes('Nutrição'))return'bn';return'bp';}
   function fdt(d){if(!d)return'—';return new Date(d).toLocaleDateString('pt-BR');}
+  function fVal(v){
+    if(!v||isNaN(v))return'—';
+    const n=Number(v);
+    if(n>=1000000)return'R$ '+(n/1000000).toFixed(n%1000000===0?0:1).replace('.',',')+'M';
+    if(n>=1000)return'R$ '+(n/1000).toFixed(n%1000===0?0:1).replace('.',',')+'k';
+    return'R$ '+n.toLocaleString('pt-BR');
+  }
 
   function rLista(lf){
     const tb=document.getElementById('tbody');
@@ -478,6 +485,7 @@
         <td>${l.origem||'—'}</td>
         <td><span class="badge ${bc(fu?.nome)}">${fu?.nome||'—'}</span><div class="ft">${fa?.nome||'—'}</div></td>
         <td>${co?.nome||'—'}</td>
+        <td>${l.valor_negociacao?fVal(l.valor_negociacao):'—'}</td>
         <td>${fdt(l.created_at)}</td></tr>`;
     }).join('');
   }
@@ -545,6 +553,7 @@
         <div class="dr"><span class="dk">Funil</span><select class="sel-i" id="eFu" onchange="atuFases()">${oFu}</select></div>
         <div class="dr"><span class="dk">Fase</span><select class="sel-i" id="eFa">${oFa}</select></div>
         <div class="dr"><span class="dk">Corretor</span>${campoCorretor}</div>
+        <div class="dr"><span class="dk">Valor negociação</span><input class="sel-i" type="number" id="eValor" placeholder="Ex: 300000" value="${l.valor_negociacao||''}" style="width:130px;"/></div>
         <button class="btn-s" onclick="salvarG('${l.id}')">Salvar alterações</button>
       </div>
       <div class="dsec"><div class="dsec-t">Histórico</div>
@@ -567,9 +576,11 @@
   async function salvarG(lid){
     const d={funil_id:document.getElementById('eFu').value,fase_id:document.getElementById('eFa').value};
     if(!corretorLogadoId)d.corretor_id=document.getElementById('eCo').value||null;
+    const vRaw=document.getElementById('eValor')?.value;
+    d.valor_negociacao=vRaw&&!isNaN(vRaw)?Number(vRaw):null;
     await fetch(`${SB}/rest/v1/leads?id=eq.${lid}`,{method:'PATCH',headers:await H(),body:JSON.stringify(d)});
     const i=leads.findIndex(l=>l.id===lid);if(i>=0)leads[i]={...leads[i],...d};
-    toast('Lead atualizado!');render();
+    toast('Lead atualizado!');render();fechar();
   }
 
   async function regInt(lid){
