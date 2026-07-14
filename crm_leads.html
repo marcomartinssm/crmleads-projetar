@@ -513,7 +513,7 @@
       else lf2.forEach(l=>{
         const co=gCor(l.corretor_id);
         const card=document.createElement('div');card.className='kcard';card.draggable=true;
-        card.innerHTML=`<div class="kn">${l.nome||'—'}</div><div class="ki"><span>${l.telefone||'—'}</span><span>${co?.nome||'Sem corretor'}</span></div>${l.origem?`<span class="kt">${l.origem}</span>`:''}`;
+        card.innerHTML=`<div class="kn">${l.nome||'—'}</div><div class="ki"><span>${l.telefone||'—'}</span><span>${co?.nome||'Sem corretor'}</span></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;">${l.origem?`<span class="kt">${l.origem}</span>`:''} ${l.valor_negociacao?`<span class="kv">💰 ${fVal(l.valor_negociacao)}</span>`:''}</div>`;
         card.addEventListener('dragstart',e=>{e.dataTransfer.setData('lid',l.id);card.style.opacity='.4';});
         card.addEventListener('dragend',()=>card.style.opacity='1');
         card.addEventListener('click',()=>abrirD(l.id));
