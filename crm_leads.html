@@ -401,7 +401,7 @@
 
   async function salvarNovoLead(){
     const nome=document.getElementById('nNome').value.trim();
-    const telefone=document.getElementById('nTelefone').value.trim();
+    const telefone=document.getElementById('nTelefone').value.trim().replace(/[^0-9+]/g,'');
     const email=document.getElementById('nEmail').value.trim();
     const origem=document.getElementById('nOrigem').value;
     const campanha=document.getElementById('nCampanha').value.trim();
@@ -414,7 +414,7 @@
     }
 
     // Verifica duplicado pelos 8 últimos dígitos
-    const suf=ultimos8(telefone);
+    const suf=ultimos8(telefone.replace(/[^0-9+]/g,''));
     const dup=leads.find(l=>(l.telefone||'').replace(/\D/g,'').slice(-8)===suf);
     if(dup){
       const cor=gCor(dup.corretor_id);
