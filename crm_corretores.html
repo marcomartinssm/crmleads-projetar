@@ -77,6 +77,14 @@
     .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;max-width:420px;}
     .toast.erro{background:var(--danger);}
     .b-login{background:var(--success-bg);color:var(--success);}
+    .b-bloq{background:var(--danger-bg);color:var(--danger);}
+    .acesso-cel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .ger-sec{padding:14px 0;border-top:2px solid var(--border);}
+    .ger-sec:first-of-type{border-top:none;padding-top:0;}
+    .ger-sec .fl{margin-bottom:6px;}
+    .ger-sec .linha{display:flex;gap:6px;}
+    .ger-sec .linha .fi{flex:1;}
+    .ger-txt{font-size:12px;color:var(--text-muted);margin-bottom:8px;}
     .b-semlogin{background:var(--bg3);color:var(--text-muted);}
     .btn-ok{background:var(--success)!important;color:#fff!important;border-color:var(--success)!important;}
     .senha-row{display:flex;gap:6px;}
@@ -154,11 +162,32 @@
     </div>
   </div>
 </div>
+<div class="mo" id="mo-ger">
+  <div class="modal">
+    <div class="modal-title" id="mg-title">Gerenciar acesso</div>
+    <input type="hidden" id="mg-id"/>
+    <div class="ger-sec">
+      <label class="fl">Trocar senha</label>
+      <div class="linha"><input class="fi" type="text" id="mg-senha" placeholder="Nova senha (mín. 8)"/><button class="btn btn-sm-ghost" onclick="gerarSenha('mg-senha')">Gerar</button></div>
+      <button class="btn btn-acc" id="mg-btn-senha" style="margin-top:8px;" onclick="gerenciar('senha')">Trocar senha</button>
+    </div>
+    <div class="ger-sec">
+      <label class="fl">Email de login</label>
+      <div class="linha"><input class="fi" type="email" id="mg-email"/><button class="btn btn-acc" id="mg-btn-email" onclick="gerenciar('email')">Salvar</button></div>
+    </div>
+    <div class="ger-sec">
+      <label class="fl">Acesso</label>
+      <div class="ger-txt" id="mg-status"></div>
+      <button class="btn" id="mg-btn-bloq" onclick="gerenciar(this.dataset.acao)"></button>
+    </div>
+    <div class="ma"><button class="btn btn-sm-ghost" onclick="fecharGer()">Fechar</button></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <script src="crm_auth.js"></script>
 <script>
 
-  let corretores=[],comLogin=new Set();
+  let corretores=[],comLogin=new Set(),acessos={};
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
   (async()=>{await checkAuth();})();
   async function H(){return await getHeaders();}
@@ -166,10 +195,12 @@
     const h=await H();
     const [r,rv]=await Promise.all([
       fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:h}),
-      fetch(`${SB}/rest/v1/usuarios_corretores?select=corretor_id`,{headers:h})
+      fetch(`${SB}/rest/v1/rpc/crm_acessos`,{method:'POST',headers:h,body:'{}'})
     ]);
     corretores=await r.json();
-    comLogin=new Set((await rv.json()).map(v=>v.corretor_id));
+    const lista=await rv.json();
+    acessos={};(Array.isArray(lista)?lista:[]).forEach(a=>acessos[a.corretor_id]=a);
+    comLogin=new Set(Object.keys(acessos));
     renderizar(corretores);
     document.getElementById('tot').textContent=corretores.length;
     document.getElementById('atv').textContent=corretores.filter(c=>c.ativo).length;
@@ -184,7 +215,7 @@
       <div><div class="cn">${c.nome}</div><div class="ce">${c.email||'—'}</div></div></div></td>
       <td>${c.telefone||'—'}</td>
       <td><span class="badge ${c.ativo?'b-on':'b-off'}">${c.ativo?'● Ativo':'● Inativo'}</span></td>
-      <td>${comLogin.has(c.id)?'<span class="badge b-login">✓ Tem login</span>':(c.ativo?`<button class="btn btn-sm-ghost" onclick="abrirAcesso('${c.id}')">🔑 Criar acesso</button>`:'<span class="badge b-semlogin">Sem login</span>')}</td>
+      <td>${comLogin.has(c.id)?`<div class="acesso-cel">${acessos[c.id]?.bloqueado?'<span class="badge b-bloq">🔒 Bloqueado</span>':'<span class="badge b-login">✓ Tem login</span>'}<button class="btn btn-sm-ghost" onclick="abrirGer('${c.id}')">⚙️ Gerenciar</button></div>`:(c.ativo?`<button class="btn btn-sm-ghost" onclick="abrirAcesso('${c.id}')">🔑 Criar acesso</button>`:'<span class="badge b-semlogin">Sem login</span>')}</td>
       <td><div class="acts">
         <button class="btn btn-sm-ghost" onclick="editar('${c.id}')">✏️ Editar</button>
         <button class="btn ${c.ativo?'btn-sm-danger':'btn-sm-success'}" onclick="toggle('${c.id}',${c.ativo})">${c.ativo?'🚫 Desativar':'✅ Ativar'}</button>
@@ -216,10 +247,10 @@
     document.getElementById('mo-acesso').classList.add('open');
   }
   function fecharAcesso(){document.getElementById('mo-acesso').classList.remove('open');}
-  function gerarSenha(){
+  function gerarSenha(alvo){
     const ch='abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
     const a=new Uint32Array(10);crypto.getRandomValues(a);
-    document.getElementById('ma-senha').value=[...a].map(n=>ch[n%ch.length]).join('');
+    document.getElementById(alvo||'ma-senha').value=[...a].map(n=>ch[n%ch.length]).join('');
   }
   async function criarAcesso(){
     const corretor_id=document.getElementById('ma-id').value;
@@ -235,11 +266,54 @@
       if(!r.ok){toast(d.erro||'Não foi possível criar o acesso.','erro',5000);b.disabled=false;b.textContent='Criar acesso';return;}
       b.classList.add('btn-ok');b.textContent='✓ Acesso criado';
       toast(`✓ Acesso criado para ${d.nome}. Login: ${d.email} · Senha: ${senha}`,null,12000);
-      comLogin.add(corretor_id);renderizar(corretores);
+      carregar();
       setTimeout(fecharAcesso,1500);
     }catch(e){toast('Erro de conexão. Tente de novo.','erro');b.disabled=false;b.textContent='Criar acesso';}
   }
   document.getElementById('mo').addEventListener('click',e=>{if(e.target===document.getElementById('mo'))fechar();});
+
+  // ── GERENCIAR ACESSO (senha, email de login, bloqueio) ──
+  function abrirGer(id){
+    const c=corretores.find(x=>x.id===id),a=acessos[id];if(!c||!a)return;
+    document.getElementById('mg-id').value=id;
+    document.getElementById('mg-title').textContent=`Gerenciar acesso — ${c.nome}`;
+    document.getElementById('mg-senha').value='';
+    document.getElementById('mg-email').value=a.email||'';
+    ['mg-btn-senha','mg-btn-email'].forEach(i=>{const b=document.getElementById(i);b.disabled=false;b.classList.remove('btn-ok');});
+    document.getElementById('mg-btn-senha').textContent='Trocar senha';
+    document.getElementById('mg-btn-email').textContent='Salvar';
+    pintarBloqueio(a.bloqueado);
+    document.getElementById('mo-ger').classList.add('open');
+  }
+  function pintarBloqueio(bloq){
+    document.getElementById('mg-status').textContent=bloq?'Bloqueado: não consegue entrar no CRM.':'Liberado: entra normalmente no CRM.';
+    const b=document.getElementById('mg-btn-bloq');b.disabled=false;
+    b.dataset.acao=bloq?'liberar':'bloquear';
+    b.className='btn '+(bloq?'btn-sm-success':'btn-sm-danger');
+    b.textContent=bloq?'✅ Liberar acesso':'🔒 Bloquear acesso';
+  }
+  function fecharGer(){document.getElementById('mo-ger').classList.remove('open');}
+  document.getElementById('mo-ger').addEventListener('click',e=>{if(e.target===document.getElementById('mo-ger'))fecharGer();});
+  async function gerenciar(acao){
+    const corretor_id=document.getElementById('mg-id').value;
+    const corpo={acao,corretor_id};
+    if(acao==='senha'){corpo.senha=document.getElementById('mg-senha').value;if(corpo.senha.length<8){toast('A senha precisa ter pelo menos 8 caracteres.','erro');return;}}
+    if(acao==='email'){corpo.email=document.getElementById('mg-email').value.trim();if(!corpo.email){toast('Preencha o email.','erro');return;}}
+    if(acao==='bloquear'&&!confirm('Bloquear o acesso? A pessoa não vai conseguir entrar no CRM.'))return;
+    const b=document.getElementById(acao==='senha'?'mg-btn-senha':acao==='email'?'mg-btn-email':'mg-btn-bloq');
+    const txt=b.textContent;b.disabled=true;b.textContent='Salvando...';
+    try{
+      const h=await H();if(!h)return;
+      const r=await fetch(`${SB}/functions/v1/criar-acesso-corretor`,{method:'POST',headers:h,body:JSON.stringify(corpo)});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok){toast(d.erro||'Não foi possível salvar.','erro',5000);b.disabled=false;b.textContent=txt;return;}
+      const a=acessos[corretor_id];
+      if(acao==='senha'){b.classList.add('btn-ok');b.textContent='✓ Senha trocada';toast(`✓ Senha trocada. Nova senha: ${corpo.senha}`,null,12000);}
+      if(acao==='email'){b.classList.add('btn-ok');b.textContent='✓ Salvo';a.email=corpo.email.toLowerCase();toast('✓ Email de login trocado.');}
+      if(acao==='bloquear'||acao==='liberar'){a.bloqueado=acao==='bloquear';pintarBloqueio(a.bloqueado);b.classList.add('btn-ok');b.textContent=a.bloqueado?'✓ Bloqueado':'✓ Liberado';toast(a.bloqueado?'✓ Acesso bloqueado.':'✓ Acesso liberado.');}
+      carregar();
+    }catch(e){toast('Erro de conexão. Tente de novo.','erro');b.disabled=false;b.textContent=txt;}
+  }
   carregar();
 </script>
 </body>

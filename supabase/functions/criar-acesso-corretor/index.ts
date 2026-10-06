@@ -1,6 +1,7 @@
-// Cria o login de um corretor por dentro do CRM.
+// Cria e gerencia o login de um corretor por dentro do CRM.
 // O cadastro público do Supabase foi desligado em 06/10 (qualquer pessoa podia
-// criar conta); agora só o administrador do CRM (tabela crm_admins) cria acesso.
+// criar conta); agora só o administrador do CRM (tabela crm_admins) cria acesso,
+// troca senha, troca email de login e bloqueia/libera (acao no corpo; padrão "criar").
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const cors = {
@@ -23,11 +24,42 @@ Deno.serve(async (req) => {
   const { data: ehAdmin } = await admin.from("crm_admins").select("user_id").eq("user_id", quem.user.id).maybeSingle();
   if (!ehAdmin) return resp(403, { erro: "Só o administrador pode criar acesso." });
 
-  let corpo: { corretor_id?: string; email?: string; senha?: string };
+  let corpo: { acao?: string; corretor_id?: string; email?: string; senha?: string };
   try { corpo = await req.json(); } catch { return resp(400, { erro: "Dados inválidos." }); }
+  const acao = corpo.acao || "criar";
   const corretor_id = corpo.corretor_id;
   const email = (corpo.email || "").trim().toLowerCase();
   const senha = corpo.senha || "";
+
+  if (acao !== "criar") {
+    if (!corretor_id) return resp(400, { erro: "Corretor não informado." });
+    const { data: vinc } = await admin.from("usuarios_corretores").select("user_id").eq("corretor_id", corretor_id).maybeSingle();
+    if (!vinc) return resp(404, { erro: "Esse corretor ainda não tem login." });
+    if (vinc.user_id === quem.user.id && acao === "bloquear") return resp(400, { erro: "Você não pode bloquear o próprio acesso." });
+
+    let mudanca: Record<string, unknown>;
+    let msg: string;
+    if (acao === "senha") {
+      if (senha.length < 8) return resp(400, { erro: "A senha precisa ter pelo menos 8 caracteres." });
+      mudanca = { password: senha }; msg = "Senha trocada";
+    } else if (acao === "email") {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return resp(400, { erro: "Email inválido." });
+      mudanca = { email, email_confirm: true }; msg = "Email de login trocado";
+    } else if (acao === "bloquear") {
+      mudanca = { ban_duration: "876000h" }; msg = "Acesso bloqueado";
+    } else if (acao === "liberar") {
+      mudanca = { ban_duration: "none" }; msg = "Acesso liberado";
+    } else return resp(400, { erro: "Ação desconhecida." });
+
+    const { error } = await admin.auth.admin.updateUserById(vinc.user_id, mudanca);
+    if (error) {
+      const jaExiste = /already|registered|exists/i.test(error.message || "");
+      return resp(400, { erro: jaExiste ? "Esse email já é usado por outro login." : "Não foi possível salvar. Tente de novo." });
+    }
+    if (acao === "email") await admin.from("corretores").update({ email }).eq("id", corretor_id);
+    return resp(200, { ok: true, msg });
+  }
+
   if (!corretor_id || !email || !senha) return resp(400, { erro: "Preencha email e senha." });
   if (senha.length < 8) return resp(400, { erro: "A senha precisa ter pelo menos 8 caracteres." });
 
