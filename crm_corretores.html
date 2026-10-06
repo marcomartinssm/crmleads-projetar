@@ -74,7 +74,14 @@
     .fi:focus{border-color:var(--acc);}
     .ma{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;}
     .empty{text-align:center;padding:50px;color:var(--text-muted);font-size:13px;}
-    .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;}
+    .toast{position:fixed;bottom:24px;right:24px;background:var(--success);color:#fff;padding:10px 20px;border-radius:9px;font-size:13px;font-weight:600;display:none;z-index:999;max-width:420px;}
+    .toast.erro{background:var(--danger);}
+    .b-login{background:var(--success-bg);color:var(--success);}
+    .b-semlogin{background:var(--bg3);color:var(--text-muted);}
+    .btn-ok{background:var(--success)!important;color:#fff!important;border-color:var(--success)!important;}
+    .senha-row{display:flex;gap:6px;}
+    .senha-row .fi{flex:1;}
+    .aviso-acesso{font-size:12px;color:var(--text-muted);margin-top:4px;}
   </style>
 </head>
 <body>
@@ -114,8 +121,8 @@
       <div class="table-title">Equipe</div>
       <input class="search-input" type="text" placeholder="🔍 Buscar..." id="busca" oninput="filtrar()"/>
     </div>
-    <table><thead><tr><th>Corretor</th><th>Telefone</th><th>Status</th><th>Ações</th></tr></thead>
-    <tbody id="tbody"><tr><td colspan="4"><div class="empty">Carregando...</div></td></tr></tbody></table>
+    <table><thead><tr><th>Corretor</th><th>Telefone</th><th>Status</th><th>Acesso</th><th>Ações</th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="5"><div class="empty">Carregando...</div></td></tr></tbody></table>
   </div>
 </div>
 <div class="mo" id="mo">
@@ -131,17 +138,38 @@
     </div>
   </div>
 </div>
+<div class="mo" id="mo-acesso">
+  <div class="modal">
+    <div class="modal-title" id="ma-title">Criar acesso</div>
+    <input type="hidden" id="ma-id"/>
+    <div class="fg"><label class="fl">Email de login</label><input class="fi" type="email" id="ma-email" placeholder="email@exemplo.com"/></div>
+    <div class="fg"><label class="fl">Senha</label>
+      <div class="senha-row"><input class="fi" type="text" id="ma-senha" placeholder="Mínimo 8 caracteres"/><button class="btn btn-sm-ghost" onclick="gerarSenha()">Gerar</button></div>
+      <div class="aviso-acesso">Passe o email e a senha para o corretor. Ele entra direto, sem confirmar email.</div>
+    </div>
+    <div class="ma">
+      <button class="btn btn-sm-ghost" onclick="fecharAcesso()">Cancelar</button>
+      <button class="btn btn-acc" id="ma-btn" onclick="criarAcesso()">Criar acesso</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <script src="crm_auth.js"></script>
 <script>
 
-  let corretores=[];
+  let corretores=[],comLogin=new Set();
   function tog(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
   (async()=>{await checkAuth();})();
   async function H(){return await getHeaders();}
   async function carregar(){
-    const r=await fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:await H()});
-    corretores=await r.json();renderizar(corretores);
+    const h=await H();
+    const [r,rv]=await Promise.all([
+      fetch(`${SB}/rest/v1/corretores?order=nome`,{headers:h}),
+      fetch(`${SB}/rest/v1/usuarios_corretores?select=corretor_id`,{headers:h})
+    ]);
+    corretores=await r.json();
+    comLogin=new Set((await rv.json()).map(v=>v.corretor_id));
+    renderizar(corretores);
     document.getElementById('tot').textContent=corretores.length;
     document.getElementById('atv').textContent=corretores.filter(c=>c.ativo).length;
     document.getElementById('ina').textContent=corretores.filter(c=>!c.ativo).length;
@@ -149,12 +177,13 @@
   function ini(n){return n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();}
   function renderizar(l){
     const tb=document.getElementById('tbody');
-    if(!l.length){tb.innerHTML=`<tr><td colspan="4"><div class="empty">Nenhum corretor</div></td></tr>`;return;}
+    if(!l.length){tb.innerHTML=`<tr><td colspan="5"><div class="empty">Nenhum corretor</div></td></tr>`;return;}
     tb.innerHTML=l.map(c=>`<tr>
       <td><div class="ci"><div class="av" style="background:${c.ativo?'var(--acc)':'#444'}">${ini(c.nome)}</div>
       <div><div class="cn">${c.nome}</div><div class="ce">${c.email||'—'}</div></div></div></td>
       <td>${c.telefone||'—'}</td>
       <td><span class="badge ${c.ativo?'b-on':'b-off'}">${c.ativo?'● Ativo':'● Inativo'}</span></td>
+      <td>${comLogin.has(c.id)?'<span class="badge b-login">✓ Tem login</span>':(c.ativo?`<button class="btn btn-sm-ghost" onclick="abrirAcesso('${c.id}')">🔑 Criar acesso</button>`:'<span class="badge b-semlogin">Sem login</span>')}</td>
       <td><div class="acts">
         <button class="btn btn-sm-ghost" onclick="editar('${c.id}')">✏️ Editar</button>
         <button class="btn ${c.ativo?'btn-sm-danger':'btn-sm-success'}" onclick="toggle('${c.id}',${c.ativo})">${c.ativo?'🚫 Desativar':'✅ Ativar'}</button>
@@ -173,7 +202,42 @@
     fechar();carregar();
   }
   async function toggle(id,at){await fetch(`${SB}/rest/v1/corretores?id=eq.${id}`,{method:'PATCH',headers:await H(),body:JSON.stringify({ativo:!at})});toast(at?'Desativado!':'Ativado!');carregar();}
-  function toast(m){const t=document.getElementById('toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+  function toast(m,tipo,ms){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(tipo==='erro'?' erro':'');t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',ms||3000);}
+
+  // ── ACESSO (login do corretor) ───────────────────────
+  function abrirAcesso(id){
+    const c=corretores.find(x=>x.id===id);if(!c)return;
+    document.getElementById('ma-id').value=c.id;
+    document.getElementById('ma-title').textContent=`Criar acesso — ${c.nome}`;
+    document.getElementById('ma-email').value=c.email||'';
+    document.getElementById('ma-senha').value='';
+    const b=document.getElementById('ma-btn');b.disabled=false;b.classList.remove('btn-ok');b.textContent='Criar acesso';
+    document.getElementById('mo-acesso').classList.add('open');
+  }
+  function fecharAcesso(){document.getElementById('mo-acesso').classList.remove('open');}
+  function gerarSenha(){
+    const ch='abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    const a=new Uint32Array(10);crypto.getRandomValues(a);
+    document.getElementById('ma-senha').value=[...a].map(n=>ch[n%ch.length]).join('');
+  }
+  async function criarAcesso(){
+    const corretor_id=document.getElementById('ma-id').value;
+    const email=document.getElementById('ma-email').value.trim();
+    const senha=document.getElementById('ma-senha').value;
+    if(!email||!senha){toast('Preencha email e senha.','erro');return;}
+    if(senha.length<8){toast('A senha precisa ter pelo menos 8 caracteres.','erro');return;}
+    const b=document.getElementById('ma-btn');b.disabled=true;b.textContent='Criando...';
+    try{
+      const h=await H();if(!h)return;
+      const r=await fetch(`${SB}/functions/v1/criar-acesso-corretor`,{method:'POST',headers:h,body:JSON.stringify({corretor_id,email,senha})});
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok){toast(d.erro||'Não foi possível criar o acesso.','erro',5000);b.disabled=false;b.textContent='Criar acesso';return;}
+      b.classList.add('btn-ok');b.textContent='✓ Acesso criado';
+      toast(`✓ Acesso criado para ${d.nome}. Login: ${d.email} · Senha: ${senha}`,null,12000);
+      comLogin.add(corretor_id);renderizar(corretores);
+      setTimeout(fecharAcesso,1500);
+    }catch(e){toast('Erro de conexão. Tente de novo.','erro');b.disabled=false;b.textContent='Criar acesso';}
+  }
   document.getElementById('mo').addEventListener('click',e=>{if(e.target===document.getElementById('mo'))fechar();});
   carregar();
 </script>

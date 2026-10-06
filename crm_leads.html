@@ -589,7 +589,9 @@
   async function regInt(lid){
     const t=document.getElementById('nTipo').value,d=document.getElementById('nDesc').value.trim();
     if(!t||!d){alert('Preencha tipo e descrição!');return;}
-    await fetch(`${SB}/rest/v1/interacoes`,{method:'POST',headers:await H(),body:JSON.stringify({lead_id:lid,tipo:t,descricao:d})});
+    // corretor_id registra quem fez o contato (antes ficava vazio e não dava para medir atendimento por corretor)
+    const r=await fetch(`${SB}/rest/v1/interacoes`,{method:'POST',headers:await H(),body:JSON.stringify({lead_id:lid,tipo:t,descricao:d,corretor_id:corretorLogadoId})});
+    if(!r.ok){toast('Não foi possível registrar. Tente de novo.','erro');return;}
     document.getElementById('nTipo').value='';document.getElementById('nDesc').value='';
     toast('Interação registrada!');abrirD(lid);
   }
