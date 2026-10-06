@@ -80,6 +80,26 @@ async function getCorretorLogado() {
   }
 }
 
+// Administrador do CRM (tabela crm_admins): vê a tela de Atendimento da equipe
+async function isAdminCRM() {
+  try {
+    const sess = await getSession();
+    if (!sess) return false;
+    const userId = JSON.parse(atob(sess.access_token.split('.')[1])).sub;
+    const res = await fetch(`${SB}/rest/v1/crm_admins?user_id=eq.${userId}&select=user_id`, {
+      headers: { 'apikey': SK, 'Authorization': `Bearer ${sess.access_token}` }
+    });
+    const data = await res.json();
+    return Array.isArray(data) && data.length > 0;
+  } catch(e) { return false; }
+}
+
+// Mostra o item "Atendimento" no menu só para administrador
+isAdminCRM().then(adm => {
+  const n = document.getElementById('navAtend');
+  if (adm && n) n.style.display = '';
+});
+
 function logout() {
   localStorage.removeItem('crm_session');
   window.location.href = 'index.html';
